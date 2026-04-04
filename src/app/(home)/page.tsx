@@ -17,18 +17,11 @@ export default async function Page() {
 
   return (
     <div className="h-full w-full overflow-hidden bg-background text-foreground">
-      <div className="flex h-full w-full">
-        
-        {/* SIDEBAR: h-full ensures it stretches top to bottom */}
-        <aside className="hidden h-full w-[280px] shrink-0 border-r border-border md:block bg-card/30">
-          <ChatSidebar initialChats={JSON.parse(JSON.stringify(chatSessions))} />
-        </aside>
-
-        {/* MAIN: flex-1 takes the rest of the space, h-full locks its height */}
+      <div className="flex h-full w-full relative">
+        <ChatSidebar initialChats={JSON.parse(JSON.stringify(chatSessions))} />
         <main className="flex h-full min-w-0 flex-1 flex-col overflow-hidden relative">
           <ChatWindow userId={userId} initialMessages={[]} chatId={null} />
         </main>
-        
       </div>
     </div>
   );

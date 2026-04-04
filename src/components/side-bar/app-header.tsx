@@ -65,6 +65,7 @@ export default function Header() {
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Dark mode toggle */}
         <Button
           variant="ghost"
           size="icon"
@@ -83,14 +84,13 @@ export default function Header() {
           )}
         </Button>
 
-        <Separator orientation="vertical" className="mx-1 h-4" />
-        <div className="flex items-center gap-2">
-        {/* NEW THEME TOGGLE */}
+        {/* Theme palette toggle */}
         <ThemeToggle />
-        
-        {/* EXISTING DARK MODE TOGGLE */}
-      </div>
-        <UserButton 
+
+        <Separator orientation="vertical" className="mx-1 h-4" />
+
+        {/* User avatar */}
+        <UserButton
           afterSignOutUrl="/"
           appearance={{
             elements: {
