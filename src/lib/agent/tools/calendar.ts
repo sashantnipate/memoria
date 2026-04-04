@@ -1,6 +1,27 @@
 import { clerkClient } from "@clerk/nextjs/server";
 import { google } from "googleapis";
 
+/**
+ * Converts a markdown string to clean plain text suitable for Google Calendar.
+ * Handles links, bold, italic, inline code, headers, and list markers.
+ */
+function stripMarkdown(text: string): string {
+  return text
+    // [link text](url)  →  url
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$2")
+    // **bold** / __bold__  →  bold
+    .replace(/(\*\*|__)(.*?)\1/g, "$2")
+    // *italic* / _italic_  →  italic
+    .replace(/(\*|_)(.*?)\1/g, "$2")
+    // `inline code`  →  inline code
+    .replace(/`([^`]+)`/g, "$1")
+    // ## Heading  →  Heading
+    .replace(/^#{1,6}\s+/gm, "")
+    // - list / * list  →  list
+    .replace(/^[\*\-]\s+/gm, "")
+    .trim();
+}
+
 async function getGoogleAuth(userId: string) {
   try {
     const provider = "oauth_google";
@@ -53,9 +74,14 @@ export async function createCalendarEvent(args: any, userId: string) {
   const auth = await getGoogleAuth(userId);
   const calendar = google.calendar({ version: "v3", auth });
 
+  // Sanitize description: strip any markdown the AI may have included
+  const cleanDescription = args.description
+    ? stripMarkdown(args.description)
+    : "Created via Memoria AI Assistant";
+
   const event = {
     summary: args.title,
-    description: args.description || "Created via Memoria AI Assistant",
+    description: cleanDescription,
     start: {
       dateTime: args.start, 
       timeZone: "UTC", 
@@ -77,7 +103,7 @@ export async function createCalendarEvent(args: any, userId: string) {
   try {
     const response = await calendar.events.insert({
       calendarId: "primary",
-      conferenceDataVersion: 1, 
+      conferenceDataVersion: 1,
       requestBody: event,
     });
 

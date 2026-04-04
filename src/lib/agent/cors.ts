@@ -34,6 +34,8 @@ export async function runAgent(userPrompt: string, userId: string, history: any[
     - **'get_upcoming_events'**: Use to check the user's schedule and availability ("Am I free tomorrow?", "What is my agenda?").
     - **'create_calendar_event'**: Use to schedule a meeting or event. **Rule:** ALWAYS check availability with 'get_upcoming_events' first to prevent double-booking.
     - **'send_gmail_message'**: Use to send an email to a recipient. 
+    - **'create_meet_link'**: Use to create a standalone Google Meet video conference link, optionally attached to a calendar event. Use this when the user says 'create a Meet link', 'generate a video call link', 'schedule a video call', or similar — especially when they don't need a full calendar event.
+    - **'get_meet_details'**: Use to look up the Google Meet link and details for an existing Google Calendar event by its event ID. Use this when the user asks for the Meet link of a specific event they have already created.
       - **CRITICAL SAFETY PROTOCOL:** You MUST NOT send an email automatically. First, write the proposed email draft inside a > Blockquote and explicitly ask the user for permission (e.g., "Does this look good to send?"). ONLY execute the 'send_gmail_message' tool AFTER the user explicitly says "Yes", "Send it", or "Looks good".
 
     ### NO DATA / FALLBACK:
