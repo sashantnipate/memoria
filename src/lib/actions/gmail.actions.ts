@@ -17,7 +17,10 @@ export async function getSyncCount(params: { after?: Date; before?: Date }) {
   const tokenResponse = await client.users.getUserOauthAccessToken(userId, "google");
   const token = tokenResponse.data[0]?.token;
 
-  if (!token) throw new Error("Google access token not found");
+  if (!token) {
+    console.warn("Google access token not found — user may not be signed in with Google or scopes are missing.");
+    return { count: 0, isEstimate: false };
+  }
 
   const oauth2Client = new google.auth.OAuth2();
   oauth2Client.setCredentials({ access_token: token });

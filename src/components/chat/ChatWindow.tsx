@@ -5,10 +5,15 @@ import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from 'remark-gfm';
 import { askEmailAgent } from "@/lib/actions/chat.actions";
+import { getSyncStatus } from "@/lib/actions/user.actions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowUp, Plus, Bot, History, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { ChatSyncCard } from "@/components/chat/ChatSyncCard";
+
+const GREETING_RE = /^(hi|hello|hey|howdy|hiya|yo|sup)\b/i;
+const SYNC_CARD_KEY = "memoria_show_sync_card";
 
 // IMPORT YOUR NEW FORM HERE (Adjust path if needed)
 import AgentForm from "@/components/create-agent/create-form"; 
@@ -31,18 +36,39 @@ export default function ChatWindow({
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  // Separate from messages[] so router.push() remounts don't wipe it
+  const [showSyncCard, setShowSyncCard] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const isEmpty = messages.length === 0 && !isLoading;
+  const isEmpty = messages.length === 0 && !isLoading && !showSyncCard;
+
+  // Restore sync card from sessionStorage on mount (survives navigation)
+  useEffect(() => {
+    if (sessionStorage.getItem(SYNC_CARD_KEY) === "1") {
+      setShowSyncCard(true);
+    }
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, showSyncCard]);
+
+  const triggerSyncCard = () => {
+    setShowSyncCard(true);
+    sessionStorage.setItem(SYNC_CARD_KEY, "1");
+  };
+
+  const dismissSyncCard = () => {
+    setShowSyncCard(false);
+    sessionStorage.removeItem(SYNC_CARD_KEY);
+  };
 
   const handleSend = async () => {
     const text = input.trim();
     if (!text || isLoading) return;
+
+    const isGreeting = GREETING_RE.test(text);
 
     setMessages((prev) => [...prev, { role: "user", content: text }]);
     setInput("");
@@ -53,7 +79,20 @@ export default function ChatWindow({
     }
 
     try {
-      const result = await askEmailAgent(text, userId, chatId);
+      // Concurrently check sync status on greetings (zero latency cost)
+      const syncCheckPromise = isGreeting && !showSyncCard
+        ? getSyncStatus()
+            .then((status) => {
+              if (status && !status.isInitialSyncDone) triggerSyncCard();
+            })
+            .catch(() => {})
+        : null;
+
+      const [result] = await Promise.all([
+        askEmailAgent(text, userId, chatId),
+        syncCheckPromise,
+      ]);
+
       if (result && result.response) {
         setMessages((prev) => [...prev, { role: "assistant", content: result.response }]);
         if (!chatId && result.chatId) {
@@ -96,11 +135,10 @@ export default function ChatWindow({
         onClick={handleSend}
         disabled={!input.trim() || isLoading}
         size="icon"
-        className={`h-9 w-9 shrink-0 rounded-xl transition-all duration-300 mr-1 ${
-          input.trim()
+        className={`h-9 w-9 shrink-0 rounded-xl transition-all duration-300 mr-1 ${input.trim()
             ? "bg-primary text-primary-foreground"
             : "bg-muted text-muted-foreground opacity-40"
-        }`}
+          }`}
       >
         <ArrowUp className="h-4 w-4" />
       </Button>
