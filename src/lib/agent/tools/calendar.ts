@@ -87,8 +87,12 @@ export async function createCalendarEvent(args: any, userId: string) {
       meetLink: response.data.conferenceData?.entryPoints?.[0]?.uri,
       event: response.data,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Google Calendar Create Error:", error);
-    throw new Error("Failed to create calendar event");
+    // Preserve the real Google API error message for the caller
+    const msg = error?.response?.data?.error?.message
+      || error?.message
+      || "Failed to create calendar event";
+    throw new Error(msg);
   }
 }

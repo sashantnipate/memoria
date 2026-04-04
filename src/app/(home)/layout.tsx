@@ -12,7 +12,7 @@ const Layout = ({children} : {children: React.ReactNode;}) => {
             
             <SidebarInset className="bg-accent/20 flex flex-col">
                 <Header />
-                <main className="flex-1 overflow-hidden">
+                <main className="flex-1 overflow-hidden flex flex-col h-full">
                     {children}
                     <Toaster/>
                 </main>
