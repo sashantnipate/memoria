@@ -365,3 +365,4 @@ export async function searchEmails(query: string, userId: string) {
 
   return results;
 } 
+
