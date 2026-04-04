@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { connectToDB } from "../database/db";
 import User from "../database/models/user.model";
+import { auth } from "@clerk/nextjs/server";
+import EmailMemory from "../database/models/email-memory.model";
 
 export async function createUser(user: any) {
   try {
@@ -33,7 +35,6 @@ export async function updateUser(clerkId: string, user: any) {
   }
 }
 
-// --- DELETE USER ---
 export async function deleteUser(clerkId: string) {
   try {
     await connectToDB();
@@ -43,7 +44,12 @@ export async function deleteUser(clerkId: string) {
       throw new Error("User not found");
     }
 
+    const deletedEmails = await EmailMemory.deleteMany({ userId: clerkId });
+    console.log(`DELETED ${deletedEmails.deletedCount} emails from memory for user ${clerkId}`);
+
+
     const deletedUser = await User.findByIdAndDelete(userToDelete._id);
+    
     revalidatePath("/"); 
     console.log("USER DELETED FROM MONGODB");
 
@@ -51,5 +57,50 @@ export async function deleteUser(clerkId: string) {
   } catch (error) {
     console.error("ERROR DELETING USER:", error);
     throw new Error(typeof error === "string" ? error : JSON.stringify(error));
+  }
+}
+
+
+export async function updateUserSyncProgress(timestamp: number) {
+  try {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+
+    await connectToDB();
+
+    const updatedUser = await User.findOneAndUpdate(
+      { clerkId: userId },
+      { 
+        $set: { 
+          "syncSettings.lastSyncedTimestamp": timestamp,
+          "syncSettings.isInitialSyncDone": true,
+          "syncSettings.updatedAt": new Date()
+        } 
+      },
+      { new: true, upsert: true } 
+    );
+
+    return { success: true, user: JSON.parse(JSON.stringify(updatedUser)) };
+  } catch (error) {
+    console.error("Failed to update sync progress:", error);
+    return { success: false };
+  }
+}
+
+export async function getSyncStatus() {
+  try {
+    const { userId } = await auth();
+    if (!userId) return null;
+
+    await connectToDB();
+    const user = await User.findOne({ clerkId: userId }).select("syncSettings");
+
+    return {
+      lastSynced: user?.syncSettings?.lastSyncedTimestamp || null,
+      isInitialSyncDone: user?.syncSettings?.isInitialSyncDone || false
+    };
+  } catch (error) {
+    console.error("Failed to fetch sync status:", error);
+    return null;
   }
 }

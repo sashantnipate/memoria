@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   devIndicators: false,
 
   allowedDevOrigins: [
-    "among-chart-estimate-restricted.trycloudflare.com",
+    "formats-demonstrates-picnic-own.trycloudflare.com",
     "localhost:3000"
   ],
 };

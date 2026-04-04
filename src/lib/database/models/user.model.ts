@@ -26,6 +26,14 @@ const UserSchema = new Schema({
   lastName: {
     type: String,
   },
+  syncSettings: {
+    lastSyncedTimestamp: { type: Number, default: 0 },
+    oldestSyncedTimestamp: { type: Number, default: 0 }, 
+    isInitialSyncDone: { type: Boolean, default: false },
+    autoSyncEnabled: { type: Boolean, default: false },
+    autoSyncInterval: { type: Number, default: 1440 }, 
+    updatedAt: { type: Date }
+  }
 });
 
 const User = models?.User || model("User", UserSchema);
