@@ -38,12 +38,17 @@ export async function runAgent(userPrompt: string, userId: string, history: any[
     - **'get_meet_details'**: Use to look up the Google Meet link and details for an existing Google Calendar event by its event ID. Use this when the user asks for the Meet link of a specific event they have already created.
       - **CRITICAL SAFETY PROTOCOL:** You MUST NOT send an email automatically. First, write the proposed email draft inside a > Blockquote and explicitly ask the user for permission (e.g., "Does this look good to send?"). ONLY execute the 'send_gmail_message' tool AFTER the user explicitly says "Yes", "Send it", or "Looks good".
 
+    🤖 **THE AGENT FACTORY ('create_autonomous_agent')**:
+    - Use this tool to build a draft of a background AI worker.
+    - When you use this tool, it will generate a form for the user to review. Tell the user: "I have drafted your new agent below. Please review the permissions and click Save when you are ready."
+    
     ### NO DATA / FALLBACK:
     - If the user has NO synced data or the tools return empty, gently suggest they use the "Build Memory / Sync" button in the top left corner of the UI.
     - Use ISO 8601 strings (YYYY-MM-DDTHH:MM:SSZ) for any date/time tool parameters.
 
     Current Date: ${new Date().toDateString()}
     `.trim();
+  
   const messages: any[] = [
     { role: "system", content: MASTER_SYSTEM_PROMPT },
     ...history,
@@ -64,6 +69,9 @@ export async function runAgent(userPrompt: string, userId: string, history: any[
     if (message.tool_calls) {
       messages.push(message);
 
+      // 🚨 THE FIX: Track if a tool generates a UI component
+      let generativeUITrigger = "";
+
       const toolResults = await Promise.all(
         message.tool_calls.map(async (toolCall) => {
           const name = toolCall.function.name;
@@ -80,6 +88,21 @@ export async function runAgent(userPrompt: string, userId: string, history: any[
           if (toolFunction) {
             try {
               const data = await toolFunction(args, userId);
+              
+              // 🚨 THE FIX: Intercept the UI tag!
+              if (data?.message && typeof data.message === "string" && data.message.includes("[RENDER_AGENT_FORM]")) {
+                // Save the tag to append later
+                generativeUITrigger = data.message;
+                
+                // Tell the AI a generic success message so it doesn't try to read the JSON!
+                return { 
+                  role: "tool", 
+                  tool_call_id: toolCall.id, 
+                  content: "Success! Tell the user you have drafted the agent and they should review the form below. DO NOT output the JSON in your response." 
+                };
+              }
+
+              // Standard tool return
               return { 
                 role: "tool", 
                 tool_call_id: toolCall.id, 
@@ -102,7 +125,14 @@ export async function runAgent(userPrompt: string, userId: string, history: any[
         messages,
       });
 
-      return finalResponse.choices?.[0]?.message?.content || "I found the info but couldn't summarize it.";
+      let finalContent = finalResponse.choices?.[0]?.message?.content || "I found the info but couldn't summarize it.";
+
+      // 🚨 THE FIX: Forcefully append the secret UI tag to the very end of the AI's text
+      if (generativeUITrigger) {
+        finalContent += `\n\n${generativeUITrigger}`;
+      }
+
+      return finalContent;
     }
 
     return message.content || "How else can I help you today?";

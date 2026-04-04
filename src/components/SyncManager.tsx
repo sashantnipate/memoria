@@ -18,18 +18,34 @@ import {
 } from "@/components/ui/select"
 
 import { getSyncCount, startInngestSync } from "@/lib/actions/gmail.actions"
+// Assuming you have this action from your Header component!
+import { getSyncStatus } from "@/lib/actions/user.actions" 
 
 export function SyncManager() {
   const [count, setCount] = React.useState<number | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [successMsg, setSuccessMsg] = React.useState<string | null>(null)
   
-  // Default to fetching the last 7 days of emails
   const [fromDate, setFromDate] = React.useState<Date>(subDays(new Date(), 7))
   const [toDate, setToDate] = React.useState<Date>(new Date())
   
   // Default interval: 1440 minutes (24 hours)
   const [syncInterval, setSyncInterval] = React.useState<string>("1440") 
+
+  // NEW: Fetch the user's existing sync settings when they open the page
+  React.useEffect(() => {
+    const fetchUserSettings = async () => {
+      try {
+        const data = await getSyncStatus()
+        if (data?.autoSyncInterval !== undefined) {
+          setSyncInterval(data.autoSyncInterval.toString())
+        }
+      } catch (error) {
+        console.error("Failed to fetch sync settings", error)
+      }
+    }
+    fetchUserSettings()
+  }, [])
 
   const handleCalculate = async () => {
     if (!fromDate || !toDate) return
@@ -48,15 +64,13 @@ export function SyncManager() {
     if (!fromDate || !toDate) return
     setLoading(true)
     try {
-      // Trigger the background job via Inngest
       await startInngestSync({ 
         after: fromDate, 
         before: toDate,
         autoSyncInterval: Number(syncInterval)
       })
       
-      // Update the UI immediately so the user isn't stuck waiting
-      setSuccessMsg("Sync started in the background! You can safely close this window.")
+      setSuccessMsg("Sync configuration saved! Processing in the background.")
     } catch (error) {
       console.error("Sync failed:", error)
     } finally {
@@ -170,7 +184,7 @@ export function SyncManager() {
                     className="w-full text-xs font-semibold"
                     disabled={loading}
                   >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Start Background Sync"}
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save & Start Background Sync"}
                   </Button>
                 </div>
               )}

@@ -10,6 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowUp, Plus, Bot, History, Sparkles } from "lucide-react";
 import Link from "next/link";
 
+// IMPORT YOUR NEW FORM HERE (Adjust path if needed)
+import AgentForm from "@/components/create-agent/create-form"; 
+
 type Message = {
   role: "user" | "assistant";
   content: string;
@@ -45,7 +48,6 @@ export default function ChatWindow({
     setInput("");
     setIsLoading(true);
 
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -65,7 +67,7 @@ export default function ChatWindow({
     }
   };
 
-  /** Shared input box JSX — reused in both centered and bottom layouts */
+  /** Shared input box JSX */
   const InputBox = (
     <div className="relative flex items-center rounded-2xl border border-input bg-card/80 backdrop-blur-md shadow-xl focus-within:border-primary/30 transition-all px-2 py-1.5">
       <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full shrink-0 text-muted-foreground ml-1">
@@ -132,10 +134,9 @@ export default function ChatWindow({
 
       {isEmpty ? (
         /* ============================================================
-           EMPTY STATE — Input centred like ChatGPT
+           EMPTY STATE
         ============================================================ */
         <div className="flex flex-1 flex-col items-center justify-center px-4 pb-8">
-          {/* Welcome heading */}
           <div className="mb-8 flex flex-col items-center gap-3 text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20">
               <Sparkles className="h-7 w-7 text-primary" />
@@ -147,8 +148,6 @@ export default function ChatWindow({
               Ask me anything about your emails, tasks, or memories.
             </p>
           </div>
-
-          {/* Centred input */}
           <div className="w-full max-w-2xl">
             {InputBox}
             <p className="mt-2 text-center text-[10px] text-muted-foreground/50 italic">
@@ -159,37 +158,75 @@ export default function ChatWindow({
 
       ) : (
         /* ============================================================
-           ACTIVE STATE — Messages stream + floating bottom input
+           ACTIVE STATE
         ============================================================ */
         <>
-          {/* Scrollable message list */}
           <div className="flex-1 overflow-y-auto px-2 md:px-6 custom-scrollbar">
             <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col pb-44 pt-6">
 
-              {messages.map((m, i) => (
-                <div
-                  key={i}
-                  className={`flex w-full mb-4 animate-in fade-in slide-in-from-bottom-1 duration-300 ${
-                    m.role === "user" ? "justify-end" : "justify-start"
-                  }`}
-                >
+              {messages.map((m, i) => {
+                // --- GENERATIVE UI INTERCEPTION LOGIC ---
+                let isGenerativeUI = false;
+                let textPart = m.content;
+                let draftedAgentData = null;
+
+                // If the message contains our secret tag, extract the JSON
+                if (m.role === "assistant" && m.content.includes("[RENDER_AGENT_FORM]")) {
+                  isGenerativeUI = true;
+                  const parts = m.content.split("[RENDER_AGENT_FORM]");
+                  textPart = parts[0]; // The conversational text before the tag
+                  
+                  try {
+                    draftedAgentData = JSON.parse(parts[1]);
+                  } catch (e) {
+                    console.error("Failed to parse agent draft payload", e);
+                  }
+                }
+                // ----------------------------------------
+
+                return (
                   <div
-                    className={`shadow-sm ${
-                      m.role === "user"
-                        ? "max-w-[80%] bg-muted/80 px-4 py-2.5 rounded-2xl rounded-tr-none text-[13px] text-foreground border border-border/50"
-                        : "max-w-[95%] w-full bg-card border border-border rounded-xl px-5 py-4 text-[14px] leading-relaxed"
+                    key={i}
+                    className={`flex w-full mb-4 animate-in fade-in slide-in-from-bottom-1 duration-300 ${
+                      m.role === "user" ? "justify-end" : "justify-start"
                     }`}
                   >
-                    {m.role === "user" ? (
-                      <p className="whitespace-pre-wrap">{m.content}</p>
-                    ) : (
-                      <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:leading-6 prose-headings:mb-2 prose-p:my-1">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                      </div>
-                    )}
+                    <div
+                      className={`shadow-sm ${
+                        m.role === "user"
+                          ? "max-w-[80%] bg-muted/80 px-4 py-2.5 rounded-2xl rounded-tr-none text-[13px] text-foreground border border-border/50"
+                          : "max-w-[95%] w-full bg-card border border-border rounded-xl px-5 py-4 text-[14px] leading-relaxed"
+                      }`}
+                    >
+                      {m.role === "user" ? (
+                        <p className="whitespace-pre-wrap">{m.content}</p>
+                      ) : (
+                        <div className="flex flex-col w-full">
+                          {/* 1. Render the conversational Markdown text */}
+                          {textPart && (
+                            <div className="prose prose-sm prose-zinc dark:prose-invert max-w-none prose-p:leading-6 prose-headings:mb-2 prose-p:my-1">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{textPart}</ReactMarkdown>
+                            </div>
+                          )}
+
+                          {/* 2. Render the Interactive Form if it exists */}
+                          {isGenerativeUI && draftedAgentData && (
+                            <div className="mt-4 pt-2 border-t border-border/40">
+                              <AgentForm 
+                                initialData={draftedAgentData} 
+                                onSuccess={() => {
+                                  // Optional: You could append a success message to the chat here
+                                  console.log("Agent saved successfully from Generative UI!");
+                                }} 
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               {isLoading && (
                 <div className="flex w-full mb-8 justify-start">

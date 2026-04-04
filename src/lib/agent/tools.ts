@@ -154,4 +154,38 @@ export const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "create_autonomous_agent",
+      description: "Generates an interactive UI form for the user to review and deploy a new background AI agent. Use this when the user asks for automation (e.g., 'send me a daily summary'). Do not tell the user it is saved—tell them you have 'drafted' the agent and they must review and save it below.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "A short, catchy name for the agent.",
+          },
+          systemPrompt: {
+            type: "string",
+            description: "The core directive. Be specific about which tools it should use.",
+          },
+          scheduleInterval: {
+            type: "number",
+            description: "Frequency in minutes (e.g., 60 for hourly, 1440 for daily).",
+          },
+          permissions: {
+            type: "object",
+            properties: {
+              canReadMemory: { type: "boolean" },
+              canDraftEmails: { type: "boolean" },
+              canSendEmails: { type: "boolean" },
+            },
+            required: ["canReadMemory", "canDraftEmails", "canSendEmails"],
+          },
+        },
+        required: ["name", "systemPrompt", "scheduleInterval", "permissions"],
+      },
+    },
+  },
 ];

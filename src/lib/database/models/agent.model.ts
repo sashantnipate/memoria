@@ -11,7 +11,10 @@ export interface IAgent extends Document {
     canSendEmails: boolean;
   };
   status: "ACTIVE" | "PAUSED";
+  scheduleInterval: number;  
+  lastRunAt: Date | null;
   createdAt: Date;
+  
 }
 
 const AgentSchema = new Schema<IAgent>({
@@ -25,6 +28,8 @@ const AgentSchema = new Schema<IAgent>({
     canSendEmails: { type: Boolean, default: false },
   },
   status: { type: String, enum: ["ACTIVE", "PAUSED"], default: "ACTIVE" },
+  scheduleInterval: { type: Number, default: 0 }, 
+  lastRunAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
 });
 

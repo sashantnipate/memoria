@@ -1,3 +1,4 @@
+import { createAutonomousAgent } from "./tools/agent-factory";
 import { createCalendarEvent, getUpcomingEvents } from "./tools/calendar";
 import { executeListEmails, executeSearchEmails, sendGmailMessage } from "./tools/emails";
 import { createMeetLink, getMeetDetails } from "./tools/meet";
@@ -17,4 +18,6 @@ export const toolRegistry: Record<string, ToolFunction> = {
   // ── Meet tools ───────────────────────────────────────────────────────────
   create_meet_link:     createMeetLink,
   get_meet_details:     getMeetDetails,
+
+  create_autonomous_agent: createAutonomousAgent
 };  
