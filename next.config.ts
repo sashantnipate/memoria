@@ -4,7 +4,8 @@ const nextConfig: NextConfig = {
   devIndicators: false,
 
   allowedDevOrigins: [
-    "localhost:3000"
+    "localhost:3000",
+    "memoria-sdxx-git-main-sashantnipates-projects.vercel.app"
   ],
 
   eslint: {
