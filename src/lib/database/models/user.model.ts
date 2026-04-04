@@ -13,12 +13,13 @@ const UserSchema = new Schema({
   },
   username: {
     type: String,
-    required: true,
+    required: false,
     unique: true,
+    sparse: true,
   },
   photo: {
     type: String,
-    required: true,
+    required: false,
   },
   firstName: {
     type: String,
