@@ -45,3 +45,14 @@ export async function askEmailAgent(userPrompt: string, userId: string, chatId?:
     throw new Error("Failed to process chat message");
   }
 }
+
+export async function deleteChat(chatId: string) {
+  try {
+    await connectToDB();
+    await Chat.findByIdAndDelete(chatId);
+    return { success: true };
+  } catch (error) {
+    console.error("Delete Chat Error:", error);
+    throw new Error("Failed to delete chat");
+  }
+}
