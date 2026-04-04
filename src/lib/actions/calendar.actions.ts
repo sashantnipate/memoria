@@ -1,10 +1,8 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { getUpcomingEvents } from "@/lib/agent/tools/calendar";
+import { getUpcomingEvents, createCalendarEvent } from "@/lib/agent/tools/calendar";
 import { startOfWeek, endOfWeek } from "date-fns";
-import { connectToDB } from "@/lib/database/db";
-import CalendarEventModel from "@/lib/database/models/calendar-event.model";
 
 export type CalendarEvent = {
   id: string | null | undefined;
@@ -14,13 +12,14 @@ export type CalendarEvent = {
   end: string | null | undefined;
   link: string | null | undefined;
   meetLink: string | null;
-  source?: "google" | "local"; // helps UI distinguish if needed
+  source?: "google" | "local";
 };
 
 /* ─────────────────────────────────────────────────────────────────
-   GET events for the week:
-   Tries Google Calendar first. Falls back to local-only on error.
-   Always merges local (MongoDB) events in.
+   GET events for the week
+   Fetches exclusively from Google Calendar — single source of truth.
+   Dates/times are returned exactly as Google stores them (with
+   timezone offset) so the UI calendar always matches Google Calendar.
 ───────────────────────────────────────────────────────────────── */
 export async function getCalendarEventsForWeek(
   weekDateISO: string
@@ -29,80 +28,58 @@ export async function getCalendarEventsForWeek(
   if (!userId) return { events: [], error: "Not authenticated" };
 
   const weekDate = new Date(weekDateISO);
-  const timeMin = startOfWeek(weekDate, { weekStartsOn: 0 }).toISOString();
-  const timeMax = endOfWeek(weekDate, { weekStartsOn: 0 }).toISOString();
+  const timeMin  = startOfWeek(weekDate, { weekStartsOn: 0 }).toISOString();
+  const timeMax  = endOfWeek(weekDate,   { weekStartsOn: 0 }).toISOString();
 
-  // 1️⃣ Fetch local events from MongoDB
-  await connectToDB();
-  const localDocs = await CalendarEventModel.find({
-    userId,
-    start: { $gte: timeMin },
-    end:   { $lte: timeMax },
-  }).lean();
-
-  const localEvents: CalendarEvent[] = localDocs.map((doc: any) => ({
-    id:          doc._id.toString(),
-    title:       doc.title,
-    description: doc.description ?? "",
-    start:       doc.start,
-    end:         doc.end,
-    link:        null,
-    meetLink:    null,
-    source:      "local",
-  }));
-
-  // 2️⃣ Try to fetch Google Calendar events (may fail if scope not granted)
-  let googleEvents: CalendarEvent[] = [];
-  let googleError: string | undefined;
   try {
-    const raw = await getUpcomingEvents({ timeMin, timeMax }, userId);
-    googleEvents = raw.map((ev) => ({ ...ev, source: "google" as const }));
+    const raw    = await getUpcomingEvents({ timeMin, timeMax }, userId);
+    const events = raw.map((ev) => ({ ...ev, source: "google" as const }));
+    return { events };
   } catch (err: any) {
-    // Google fetch failed (e.g. insufficient scope) — not fatal, just skip
-    googleError = err?.message;
-    console.warn("Google Calendar fetch skipped:", googleError);
+    console.error("Google Calendar fetch error:", err);
+    return {
+      events: [],
+      error: err?.message || "Could not reach Google Calendar. Please re-sync your account.",
+    };
   }
-
-  // 3️⃣ Merge: local first so duplicates from Google (if any) appear after
-  const merged = [...localEvents, ...googleEvents];
-
-  return {
-    events: merged,
-    // Only surface the Google error if there are no local events either
-    error: merged.length === 0 && googleError ? googleError : undefined,
-  };
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   CREATE event — saved directly to MongoDB (no Google API needed)
+   CREATE event — written directly to Google Calendar
+   The datetime-local input gives a local-time string (no offset).
+   We convert it to a UTC ISO string; Google + UI both show it in
+   the user's local timezone, so dates always match.
 ───────────────────────────────────────────────────────────────── */
 export async function createCalendarEventAction(args: {
   title: string;
   description?: string;
-  start: string; // ISO datetime
+  start: string; // ISO datetime (from browser, already UTC via new Date().toISOString())
   end: string;   // ISO datetime
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const { userId } = await auth();
     if (!userId) return { success: false, error: "Not authenticated" };
 
-    if (!args.title?.trim()) return { success: false, error: "Title is required" };
-    if (!args.start || !args.end) return { success: false, error: "Start and end are required" };
+    if (!args.title?.trim())
+      return { success: false, error: "Title is required" };
+    if (!args.start || !args.end)
+      return { success: false, error: "Start and end are required" };
     if (new Date(args.end) <= new Date(args.start))
       return { success: false, error: "End time must be after start time" };
 
-    await connectToDB();
-    await CalendarEventModel.create({
-      userId,
-      title:       args.title.trim(),
-      description: args.description?.trim() ?? "",
-      start:       new Date(args.start).toISOString(),
-      end:         new Date(args.end).toISOString(),
-    });
+    await createCalendarEvent(
+      {
+        title:       args.title.trim(),
+        description: args.description?.trim() || "Created via Memoria",
+        start:       new Date(args.start).toISOString(),
+        end:         new Date(args.end).toISOString(),
+      },
+      userId
+    );
 
     return { success: true };
   } catch (err: any) {
-    console.error("Create local event error:", err);
-    return { success: false, error: err?.message || "Failed to save event" };
+    console.error("Create Google Calendar event error:", err);
+    return { success: false, error: err?.message || "Failed to create event" };
   }
 }
