@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-// Notice we changed the import to startInngestSync
 import { getSyncCount, startInngestSync } from "@/lib/actions/gmail.actions"
 
 export function SyncManager() {
@@ -25,9 +24,11 @@ export function SyncManager() {
   const [loading, setLoading] = React.useState(false)
   const [successMsg, setSuccessMsg] = React.useState<string | null>(null)
   
+  // Default to fetching the last 7 days of emails
   const [fromDate, setFromDate] = React.useState<Date>(subDays(new Date(), 7))
   const [toDate, setToDate] = React.useState<Date>(new Date())
   
+  // Default interval: 1440 minutes (24 hours)
   const [syncInterval, setSyncInterval] = React.useState<string>("1440") 
 
   const handleCalculate = async () => {
@@ -37,7 +38,7 @@ export function SyncManager() {
       const result = await getSyncCount({ after: fromDate, before: toDate })
       setCount(result.count)
     } catch (error) {
-      console.error(error)
+      console.error("Failed to calculate emails:", error)
     } finally {
       setLoading(false)
     }
@@ -47,14 +48,14 @@ export function SyncManager() {
     if (!fromDate || !toDate) return
     setLoading(true)
     try {
-      // Trigger the background job instead of waiting for the direct action
+      // Trigger the background job via Inngest
       await startInngestSync({ 
         after: fromDate, 
         before: toDate,
         autoSyncInterval: Number(syncInterval)
       })
       
-      // Update the message to reflect background processing
+      // Update the UI immediately so the user isn't stuck waiting
       setSuccessMsg("Sync started in the background! You can safely close this window.")
     } catch (error) {
       console.error("Sync failed:", error)
