@@ -100,7 +100,7 @@ export function SyncManager() {
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">From</Label>
-                <Popover>
+                <Popover modal={false}>
                   <PopoverTrigger asChild>
                     <Button 
                       variant="outline" 
@@ -109,7 +109,7 @@ export function SyncManager() {
                       {fromDate ? format(fromDate, "MMM dd, yyyy") : "Pick date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0" align="start" onInteractOutside={(e) => e.preventDefault()}>
                     <Calendar mode="single" selected={fromDate} onSelect={(d) => d && setFromDate(d)} initialFocus />
                   </PopoverContent>
                 </Popover>
@@ -117,7 +117,7 @@ export function SyncManager() {
 
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">To</Label>
-                <Popover>
+                <Popover modal={false}>
                   <PopoverTrigger asChild>
                     <Button 
                       variant="outline" 
@@ -126,7 +126,7 @@ export function SyncManager() {
                       {toDate ? format(toDate, "MMM dd, yyyy") : "Pick date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0" align="start" onInteractOutside={(e) => e.preventDefault()}>
                     <Calendar mode="single" selected={toDate} onSelect={(d) => d && setToDate(d)} initialFocus />
                   </PopoverContent>
                 </Popover>
