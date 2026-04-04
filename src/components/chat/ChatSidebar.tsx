@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -11,8 +11,10 @@ import {
   History, 
   PanelLeftClose, 
   PanelLeft, 
-  X 
+  X,
+  Trash2
 } from "lucide-react";
+import { deleteChat } from "@/lib/actions/chat.actions";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -33,8 +35,21 @@ export default function ChatSidebar({
   initialChats?: ChatItem[];
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [chats, setChats] = useState<ChatItem[]>(initialChats);
+  const [hoveredChatId, setHoveredChatId] = useState<string | null>(null);
+
+  const handleDelete = async (e: React.MouseEvent, chatId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setChats((prev) => prev.filter((c) => c._id !== chatId));
+    await deleteChat(chatId);
+    if (pathname === `/chat/${chatId}`) {
+      router.push("/");
+    }
+  };
 
   // Listen for the toggle event from the Mobile Header (ChatWindow)
   useEffect(() => {
@@ -138,43 +153,64 @@ export default function ChatSidebar({
               )}
 
               <div className="space-y-1">
-                {initialChats.length === 0 ? (
+                {chats.length === 0 ? (
                   !isCollapsed && (
                     <div className="px-2 py-4 text-xs text-center text-muted-foreground bg-muted/30 rounded-xl border border-dashed">
                       No chats yet
                     </div>
                   )
                 ) : (
-                  initialChats.map((chat) => {
+                  chats.map((chat) => {
                     const isActive = pathname === `/chat/${chat._id}`;
 
                     return (
                       <Tooltip key={chat._id} delayDuration={isCollapsed ? 0 : 500}>
                         <TooltipTrigger asChild>
-                          <Button
-                            asChild
-                            variant={isActive ? "secondary" : "ghost"}
+                          <div
+                            onMouseEnter={() => setHoveredChatId(chat._id)}
+                            onMouseLeave={() => setHoveredChatId(null)}
                             className={cn(
-                              "h-auto w-full rounded-xl py-3 transition-all",
-                              isCollapsed ? "md:px-0 md:justify-center" : "px-3 justify-start",
-                              isActive 
-                                ? "bg-primary/10 hover:bg-primary/15 text-primary font-medium" 
+                              "relative flex items-center w-full rounded-xl transition-all cursor-pointer",
+                              isCollapsed ? "md:justify-center" : "",
+                              isActive
+                                ? "bg-primary/10 text-primary"
                                 : "hover:bg-accent text-muted-foreground hover:text-foreground"
                             )}
                           >
-                            <Link href={`/chat/${chat._id}`}>
+                            {/* Delete button — shown on hover via React state, on the LEFT */}
+                            {(!isCollapsed || isMobileOpen) && hoveredChatId === chat._id && (
+                              <button
+                                onClick={(e) => handleDelete(e, chat._id)}
+                                className="ml-2 shrink-0 rounded-md p-1 transition-colors text-black dark:text-white hover:bg-destructive/10 hover:text-destructive"
+                                title="Delete chat"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+
+                            {/* Chat link area */}
+                            <Link
+                              href={`/chat/${chat._id}`}
+                              className={cn(
+                                "flex items-center flex-1 min-w-0 py-3 rounded-xl transition-all",
+                                isCollapsed ? "md:px-0 md:justify-center" : "px-3",
+                                isActive
+                                  ? "text-primary font-medium"
+                                  : "text-muted-foreground hover:text-foreground"
+                              )}
+                            >
                               <MessageSquare className={cn(
                                 "h-4 w-4 shrink-0",
                                 (!isCollapsed || isMobileOpen) && "mr-3",
                                 isActive ? "text-primary" : "text-muted-foreground"
                               )} />
                               {(!isCollapsed || isMobileOpen) && (
-                                <span className="truncate text-left text-sm">
+                                <span className="truncate text-sm block overflow-hidden text-ellipsis whitespace-nowrap">
                                   {chat.title || "Untitled Conversation"}
                                 </span>
                               )}
                             </Link>
-                          </Button>
+                          </div>
                         </TooltipTrigger>
                         {(isCollapsed && !isMobileOpen) && (
                           <TooltipContent side="right">
