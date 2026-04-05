@@ -1,12 +1,14 @@
 import OpenAI from "openai";
-import { tools } from "./tools";
+import { tools } from "./tools"; 
 import { toolRegistry } from "./registry";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function runAgent(userPrompt: string, userId: string, history: any[] = []) {
+  
+  const isAutonomousMode = userPrompt.includes("EXTERNAL TRIGGER:");
 
-    const MASTER_SYSTEM_PROMPT = `
+  const MASTER_SYSTEM_PROMPT = `
 You are Memoria, a highly efficient AI executive assistant.
 Your job is to take action fast — schedule meetings, draft emails, and manage calendars with minimal back-and-forth.
 
@@ -32,8 +34,6 @@ When a user says "Schedule a meeting and send an email":
    - Email draft in a > blockquote
    - One line: "Ready to send this email?"
 6. On user confirmation → call send_gmail_message → done.
-
-This means the user only ever types ONE "yes" for the entire flow.
 
 ### WHAT "SILENT" MEANS:
 Do not narrate tool calls. Do not say:
@@ -87,31 +87,59 @@ If the user only asks to schedule / only asks for a Meet link / only asks to rea
 - **search_emails** — topic/entity-based email search
 - **get_meet_details** — get Meet link for an existing event by ID
 
+🤖 **THE AGENT FACTORY ('create_autonomous_agent')**:
+- Use this tool to build a draft of a background AI worker.
+- When you use this tool, it will generate a form for the user to review. Tell the user: "I have drafted your new agent below. Please review the permissions and click Save when you are ready."
+
 ### NO DATA FALLBACK:
 If tools return empty, tell the user to click **"Build Memory / Sync"** in the top-left corner.
 
 Current date: ${new Date().toDateString()}
 Current timezone: Asia/Kolkata (IST, UTC+05:30)
-`.trim();
+
+${isAutonomousMode ? `\n🚨 AUTONOMOUS OVERRIDE: You are currently running in an automated background worker. DO NOT ask the user for confirmation to send emails or schedule events. Take action and execute the tools immediately.` : ""}
+  `.trim();
+  
   const messages: any[] = [
     { role: "system", content: MASTER_SYSTEM_PROMPT },
     ...history,
     { role: "user", content: userPrompt }
   ];
 
-    const message = response.choices?.[0]?.message;
-    if (!message) return "The Master Agent is currently unavailable.";
+  try {
+    let generativeUITrigger = "";
 
-    if (message.tool_calls) {
+    // 🚨 THE AGENTIC LOOP: Replaces the static two-call structure
+    // This allows the AI to chain up to 5 actions together (Search -> Draft -> Send)
+    for (let i = 0; i < 5; i++) {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages,
+        tools: tools as any, // Tools are passed on every single iteration
+      });
+
+      const message = response.choices?.[0]?.message;
+      if (!message) return "The Master Agent is currently unavailable.";
+
       messages.push(message);
 
-      // 🚨 THE FIX: Track if a tool generates a UI component
-      let generativeUITrigger = "";
+      // If no tools are called, the AI has finalized its thought process. Break the loop.
+      if (!message.tool_calls) {
+        let finalContent = message.content || "Task completed.";
+        
+        // Forcefully append the secret UI tag to the very end of the AI's text
+        if (generativeUITrigger) {
+          finalContent += `\n\n${generativeUITrigger}`;
+        }
+        
+        return finalContent;
+      }
 
+      // If tools ARE called, execute them all in parallel
       const toolResults = await Promise.all(
         message.tool_calls.map(async (toolCall) => {
           const name = toolCall.function.name;
-
+          
           let args = {};
           try {
             args = JSON.parse(toolCall.function.arguments || "{}");
@@ -120,10 +148,22 @@ Current timezone: Asia/Kolkata (IST, UTC+05:30)
           }
 
           const toolFunction = toolRegistry[name];
-
+          
           if (toolFunction) {
             try {
               const data = await toolFunction(args, userId);
+              
+              // Intercept the UI tag!
+              if (data?.message && typeof data.message === "string" && data.message.includes("[RENDER_AGENT_FORM]")) {
+                generativeUITrigger = data.message;
+                return { 
+                  role: "tool", 
+                  tool_call_id: toolCall.id, 
+                  content: "Success! Tell the user you have drafted the agent and they should review the form below. DO NOT output the JSON in your response." 
+                };
+              }
+
+              // Standard tool return
               return { 
                 role: "tool", 
                 tool_call_id: toolCall.id, 
@@ -134,31 +174,20 @@ Current timezone: Asia/Kolkata (IST, UTC+05:30)
               return { role: "tool", tool_call_id: toolCall.id, content: "Error executing tool." };
             }
           }
-
+          
           return { role: "tool", tool_call_id: toolCall.id, content: "Requested tool does not exist." };
         })
       );
 
+      // Push the tool results into the message array so the AI can read them on the next loop
       messages.push(...toolResults);
-
-      const finalResponse = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages,
-      });
-
-      let finalContent = finalResponse.choices?.[0]?.message?.content || "I found the info but couldn't summarize it.";
-
-      // 🚨 THE FIX: Forcefully append the secret UI tag to the very end of the AI's text
-      if (generativeUITrigger) {
-        finalContent += `\n\n${generativeUITrigger}`;
-      }
-
-      return finalContent;
     }
 
-    return message.content || "How else can I help you today?";
+    // Safety net in case it gets stuck in an infinite loop
+    return "Max execution steps reached. Action stopped to prevent infinite loop.";
 
-  } catch (error) {
+  } catch (error) { 
     console.error("Master Agent Core Error:", error);
     return "I encountered a system error. Please try again later.";
   }
+}

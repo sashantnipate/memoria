@@ -104,3 +104,29 @@ export async function getSyncStatus() {
     return null;
   }
 }
+
+export async function updateSyncInterval(intervalMinutes: number) {
+  try {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+
+    await connectToDB();
+    
+    const updatedUser = await User.findOneAndUpdate(
+      { clerkId: userId },
+      { 
+        $set: { 
+          "syncSettings.autoSyncInterval": intervalMinutes,
+          "syncSettings.updatedAt": new Date() 
+        } 
+      },
+      { new: true, upsert: true }
+    );
+
+    revalidatePath("/"); // Refreshes the UI data
+    return { success: true, data: JSON.parse(JSON.stringify(updatedUser)) };
+  } catch (error) {
+    console.error("Failed to update sync interval:", error);
+    return { success: false };
+  }
+}

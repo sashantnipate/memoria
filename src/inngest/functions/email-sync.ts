@@ -12,7 +12,6 @@ export const syncGmailProcess = inngest.createFunction(
     triggers: [{ event: "gmail/sync.requested" }]
   },
   async ({ event, step }) => { 
-    
     const { userId, accessToken, after, before, autoSyncInterval } = event.data as any;
 
     const gaps = await step.run("calculate-gaps", async () => {
@@ -27,15 +26,9 @@ export const syncGmailProcess = inngest.createFunction(
       const kEnd = settings?.lastSyncedTimestamp ? Math.floor(settings.lastSyncedTimestamp / 1000) : null;
 
       const queries = [];
-      if (!kStart || rStart < kStart) {
-        queries.push({ q: `after:${rStart} before:${kStart ? kStart - 1 : rEnd}`, type: 'history' });
-      }
-      if (kEnd && rEnd > kEnd) {
-        queries.push({ q: `after:${kEnd + 1} before:${rEnd}`, type: 'future' });
-      }
-      if (!kStart && !kEnd) { 
-         queries.push({ q: `after:${rStart} before:${rEnd}`, type: 'fresh' });
-      }
+      if (!kStart || rStart < kStart) queries.push({ q: `after:${rStart} before:${kStart ? kStart - 1 : rEnd}`, type: 'history' });
+      if (kEnd && rEnd > kEnd) queries.push({ q: `after:${kEnd + 1} before:${rEnd}`, type: 'future' });
+      if (!kStart && !kEnd) queries.push({ q: `after:${rStart} before:${rEnd}`, type: 'fresh' });
       return queries;
     });
 
@@ -45,13 +38,15 @@ export const syncGmailProcess = inngest.createFunction(
     oauth2Client.setCredentials({ access_token: accessToken });
     const gmail = google.gmail({ version: "v1", auth: oauth2Client });
 
-    let totalProcessed = 0;
+    let finalTotalProcessed = 0;
+    
+    // 🚨 NEW: Create one master array to hold all new emails found during this sync
+    const allNewAiEvents: any[] = []; 
 
     for (const gap of gaps) {
       const messageIds = await step.run(`fetch-ids-${gap.type}`, async () => {
         let allIds: string[] = [];
         let pageToken: string | undefined = undefined;
-
         do {
           const res = await gmail.users.messages.list({
             userId: "me",
@@ -59,12 +54,10 @@ export const syncGmailProcess = inngest.createFunction(
             maxResults: 500,
             pageToken: pageToken,
           });
-
           const msgs = res.data.messages || [];
           allIds.push(...msgs.map(m => m.id!));
           pageToken = res.data.nextPageToken || undefined;
         } while (pageToken);
-
         return allIds.reverse(); 
       });
 
@@ -73,22 +66,21 @@ export const syncGmailProcess = inngest.createFunction(
       for (let i = 0; i < messageIds.length; i += 5) {
         const chunk = messageIds.slice(i, i + 5);
         
-        await step.run(`process-chunk-${gap.type}-${i}`, async () => {
+        const chunkData = await step.run(`process-chunk-${gap.type}-${i}`, async () => {
           await connectToDB();
-          
           const bulkOps = [];
+          const processedEmails = []; 
 
           for (const id of chunk) {
             try {
               const detail = await gmail.users.messages.get({ userId: "me", id: id, format: "full" });
               const headers = detail.data.payload?.headers;
-              
               const rawSubject = headers?.find(h => h.name === 'Subject')?.value || "No Subject";
               const cleanSubject = rawSubject.replace(/\r?\n|\r/g, ' ').trim();
+              const fromStr = headers?.find(h => h.name === 'From')?.value || "";
               
               let bodyText = "";
               const payload = detail.data.payload;
-              
               if (payload?.parts) {
                 const plainPart = payload.parts.find((p: any) => p.mimeType === "text/plain");
                 bodyText = plainPart?.body?.data ? Buffer.from(plainPart.body.data, 'base64url').toString('utf-8') : "";
@@ -96,67 +88,70 @@ export const syncGmailProcess = inngest.createFunction(
                 bodyText = payload?.body?.data ? Buffer.from(payload.body.data, 'base64url').toString('utf-8') : "";
               }
 
-              const cleanText = bodyText
-                .replace(/<[^>]*>?/gm, '') 
-                .replace(/\s+/g, ' ')      
-                .trim()
-                .slice(0, 8000);           
+              const cleanText = bodyText.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim().slice(0, 8000);
+              const vector = await generateEmailEmbedding(cleanSubject, cleanText || "Empty Email Content");
 
-              // NEW FIX: Prevent OpenAI crash if email body is totally empty
-              const textToEmbed = cleanText.length > 0 ? cleanText : (cleanSubject || "Empty Email Content");
-              const vector = await generateEmailEmbedding(cleanSubject, textToEmbed);
+              if (vector) {
+                bulkOps.push({
+                  updateOne: {
+                    filter: { gmailId: id, userId: userId },
+                    update: {
+                      $set: {
+                        threadId: detail.data.threadId,
+                        subject: cleanSubject,
+                        from: fromStr,
+                        to: headers?.find(h => h.name === 'To')?.value || "",
+                        date: headers?.find(h => h.name === 'Date')?.value || "",
+                        snippet: detail.data.snippet || "",
+                        body: cleanText,
+                        embedding: vector, 
+                        internalDate: parseInt(detail.data.internalDate || "0"),
+                      }
+                    },
+                    upsert: true
+                  }
+                });
 
-              bulkOps.push({
-                updateOne: {
-                  filter: { gmailId: id },
-                  update: {
-                    $set: {
-                      userId,
-                      threadId: detail.data.threadId,
-                      subject: cleanSubject,
-                      from: headers?.find(h => h.name === 'From')?.value || "",
-                      to: headers?.find(h => h.name === 'To')?.value || "",
-                      date: headers?.find(h => h.name === 'Date')?.value || "",
-                      snippet: detail.data.snippet ? detail.data.snippet.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim() : "",
-                      body: cleanText,
-                      embedding: vector, 
-                      internalDate: parseInt(detail.data.internalDate || "0"),
-                    }
-                  },
-                  upsert: true
-                }
-              });
+                processedEmails.push({ subject: cleanSubject, from: fromStr, body: cleanText });
+              }
             } catch (err) {
               console.error(`Error processing email ${id}:`, err);
             }
           }
 
           if (bulkOps.length > 0) {
-            try {
-              // NEW FIX: ordered: false guarantees that 1 bad schema match won't break the whole chunk
-              await EmailMemory.bulkWrite(bulkOps, { ordered: false });
-            } catch (dbErr) {
-              console.error(`BulkWrite encountered an error, but valid emails were still saved:`, dbErr);
-            }
+            await EmailMemory.bulkWrite(bulkOps, { ordered: false });
           }
+          
+          return processedEmails;
         });
+
+        // 🚨 NEW: Accumulate the events instead of sending them in the loop
+        if (chunkData && chunkData.length > 0 && gap.type !== 'history') {
+          const eventsFromThisChunk = chunkData.map(email => ({
+            name: "email/new.received",
+            data: { userId, subject: email.subject, from: email.from, body: email.body }
+          }));
+          allNewAiEvents.push(...eventsFromThisChunk);
+        }
         
-        totalProcessed += chunk.length;
+        finalTotalProcessed += (chunkData?.length || 0);
       }
+    }
+
+    // 🚨 NEW: Send ALL AI events at once, completely outside the chunking loops!
+    if (allNewAiEvents.length > 0) {
+      await step.sendEvent("dispatch-all-ai-triage-events", allNewAiEvents as any);
     }
 
     await step.run("final-metadata-update", async () => {
       await connectToDB();
-      
-      const safeLastSynced = new Date(before).getTime() || Date.now();
-      const safeOldestSynced = new Date(after).getTime() || Date.now();
-
       await User.findOneAndUpdate(
         { clerkId: userId },
         { 
           $set: { 
-            "syncSettings.lastSyncedTimestamp": safeLastSynced,
-            "syncSettings.oldestSyncedTimestamp": safeOldestSynced,
+            "syncSettings.lastSyncedTimestamp": new Date(before).getTime(),
+            "syncSettings.oldestSyncedTimestamp": new Date(after).getTime(),
             "syncSettings.isInitialSyncDone": true,
             "syncSettings.autoSyncInterval": autoSyncInterval,
             "syncSettings.updatedAt": new Date()
@@ -165,6 +160,6 @@ export const syncGmailProcess = inngest.createFunction(
       );
     });
 
-    return { success: true, totalProcessed };
+    return { success: true, totalProcessed: finalTotalProcessed, totalEventsDispatched: allNewAiEvents.length };
   }
 );

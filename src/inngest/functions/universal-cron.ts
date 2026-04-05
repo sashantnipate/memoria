@@ -8,7 +8,7 @@ export const universalMasterCron = inngest.createFunction(
   { 
     id: "universal-master-cron",
     // Inngest v4 requirement: triggers go INSIDE the options object
-    triggers: [{ cron: "*/5 * * * *" }] 
+    triggers: [{ cron: "* * * * *" }] 
   },
   async ({ step }) => { 
     

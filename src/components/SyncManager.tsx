@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { format, subDays } from "date-fns"
+import { format, subDays, isAfter } from "date-fns" // <-- Added isAfter
 import { Database, Loader2, CalendarIcon, CheckCircle2 } from "lucide-react"
+import { toast } from "sonner" // <-- Added toast import
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -18,8 +19,7 @@ import {
 } from "@/components/ui/select"
 
 import { getSyncCount, startInngestSync } from "@/lib/actions/gmail.actions"
-// Assuming you have this action from your Header component!
-import { getSyncStatus } from "@/lib/actions/user.actions" 
+import { getSyncStatus, updateSyncInterval } from "@/lib/actions/user.actions" // <-- Added updateSyncInterval
 
 export function SyncManager() {
   const [count, setCount] = React.useState<number | null>(null)
@@ -32,7 +32,7 @@ export function SyncManager() {
   // Default interval: 1440 minutes (24 hours)
   const [syncInterval, setSyncInterval] = React.useState<string>("1440") 
 
-  // NEW: Fetch the user's existing sync settings when they open the page
+  // Fetch the user's existing sync settings when they open the page
   React.useEffect(() => {
     const fetchUserSettings = async () => {
       try {
@@ -47,14 +47,35 @@ export function SyncManager() {
     fetchUserSettings()
   }, [])
 
+  // NEW: Instantly save the background interval without needing a full resync
+  const handleIntervalChange = async (val: string) => {
+  setSyncInterval(val); // Update local UI state
+  
+  const result = await updateSyncInterval(Number(val)); // Call the server action above
+  
+  if (result.success) {
+    toast.success(`Frequency set to ${val === "0" ? "Manual" : `${val} minutes`}`);
+  } else {
+    toast.error("Database update failed");
+  }
+};
+
   const handleCalculate = async () => {
     if (!fromDate || !toDate) return
+    
+    // Validate Dates
+    if (isAfter(fromDate, toDate)) {
+      toast.error("'From' date cannot be after 'To' date")
+      return
+    }
+
     setLoading(true)
     try {
       const result = await getSyncCount({ after: fromDate, before: toDate })
       setCount(result.count)
     } catch (error) {
       console.error("Failed to calculate emails:", error)
+      toast.error("Failed to calculate emails")
     } finally {
       setLoading(false)
     }
@@ -62,6 +83,13 @@ export function SyncManager() {
 
   const handleStartSync = async () => {
     if (!fromDate || !toDate) return
+
+    // Validate Dates
+    if (isAfter(fromDate, toDate)) {
+      toast.error("'From' date cannot be after 'To' date")
+      return
+    }
+
     setLoading(true)
     try {
       await startInngestSync({ 
@@ -73,6 +101,7 @@ export function SyncManager() {
       setSuccessMsg("Sync configuration saved! Processing in the background.")
     } catch (error) {
       console.error("Sync failed:", error)
+      toast.error("Sync failed to start")
     } finally {
       setLoading(false)
     }
@@ -118,6 +147,7 @@ export function SyncManager() {
                   <PopoverTrigger asChild>
                     <Button 
                       variant="outline" 
+                      disabled={loading}
                       className={cn("w-full justify-start text-left font-normal h-9 px-3 text-xs", !fromDate && "text-muted-foreground")}
                     >
                       {fromDate ? format(fromDate, "MMM dd, yyyy") : "Pick date"}
@@ -135,6 +165,7 @@ export function SyncManager() {
                   <PopoverTrigger asChild>
                     <Button 
                       variant="outline" 
+                      disabled={loading}
                       className={cn("w-full justify-start text-left font-normal h-9 px-3 text-xs", !toDate && "text-muted-foreground")}
                     >
                       {toDate ? format(toDate, "MMM dd, yyyy") : "Pick date"}
@@ -149,7 +180,8 @@ export function SyncManager() {
 
             <div className="space-y-2 pt-1">
               <Label className="text-xs text-muted-foreground">Auto-Sync Background Interval</Label>
-              <Select value={syncInterval} onValueChange={setSyncInterval}>
+              {/* FIXED: onValueChange now properly points to handleIntervalChange! */}
+              <Select value={syncInterval} onValueChange={handleIntervalChange} disabled={loading}>
                 <SelectTrigger className="h-9 text-xs">
                   <SelectValue placeholder="Select an interval" />
                 </SelectTrigger>
