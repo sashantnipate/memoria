@@ -1,0 +1,471 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+<defs>
+
+  <!-- Gradients -->
+  <linearGradient id="board-bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#eef5ee"/>
+    <stop offset="100%" stop-color="#e4f0e8"/>
+  </linearGradient>
+
+  <linearGradient id="trace-v" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%"   stop-color="#2aac7a"/>
+    <stop offset="50%"  stop-color="#1a9a8a"/>
+    <stop offset="100%" stop-color="#1a7acc"/>
+  </linearGradient>
+
+  <linearGradient id="trace-h" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#2aac7a"/>
+    <stop offset="100%" stop-color="#1a7acc"/>
+  </linearGradient>
+
+  <linearGradient id="chip-bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%"   stop-color="#1a2a1a"/>
+    <stop offset="100%" stop-color="#0d1a12"/>
+  </linearGradient>
+
+  <linearGradient id="die-gold" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%"   stop-color="#e8c870"/>
+    <stop offset="40%"  stop-color="#c8a84b"/>
+    <stop offset="70%"  stop-color="#d4b455"/>
+    <stop offset="100%" stop-color="#b89030"/>
+  </linearGradient>
+
+  <linearGradient id="pin-gold" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%"   stop-color="#e8c870"/>
+    <stop offset="100%" stop-color="#c8a84b"/>
+  </linearGradient>
+
+  <linearGradient id="wordmark-grad" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#1a2e1a"/>
+    <stop offset="60%"  stop-color="#1a2e1a"/>
+    <stop offset="61%"  stop-color="#1aac7a"/>
+    <stop offset="100%" stop-color="#1a7acc"/>
+  </linearGradient>
+
+  <!-- Glow filter for chip -->
+  <filter id="chip-glow-filter" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur stdDeviation="4" result="blur"/>
+    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+
+  <!-- Glow for solder pads -->
+  <filter id="pad-glow" x="-100%" y="-100%" width="300%" height="300%">
+    <feGaussianBlur stdDeviation="2.5" result="blur"/>
+    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+
+  <!-- Board shadow -->
+  <filter id="board-shadow" x="-8%" y="-8%" width="116%" height="116%">
+    <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#2aac7a" flood-opacity="0.15"/>
+  </filter>
+
+  <!-- Grid pattern for board -->
+  <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#2aac7a" stroke-width="0.3" opacity="0.25"/>
+  </pattern>
+
+  <!-- Clip path for board interior -->
+  <clipPath id="board-clip">
+    <rect x="60" y="30" width="480" height="480" rx="16"/>
+  </clipPath>
+
+  <!-- CSS Animations -->
+  <style>
+    @keyframes signal-flow {
+      0%   { stroke-dashoffset: 900; opacity: 0; }
+      6%   { opacity: 0.9; }
+      92%  { opacity: 0.9; }
+      100% { stroke-dashoffset: 0; opacity: 0; }
+    }
+    @keyframes signal-rev {
+      0%   { stroke-dashoffset: -900; opacity: 0; }
+      6%   { opacity: 0.9; }
+      92%  { opacity: 0.9; }
+      100% { stroke-dashoffset: 0; opacity: 0; }
+    }
+    @keyframes pad-pulse {
+      0%, 100% { opacity: 0.7; r: 6; }
+      50%       { opacity: 1;   r: 7.5; }
+    }
+    @keyframes chip-breathe {
+      0%, 100% { opacity: 0.4; }
+      50%       { opacity: 0.85; }
+    }
+    @keyframes pin-shine {
+      0%, 100% { opacity: 0.65; }
+      50%       { opacity: 1; }
+    }
+    @keyframes board-in {
+      from { opacity: 0; transform: scale(0.9); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    @keyframes text-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .pulse { fill: none; stroke: #fff; stroke-linecap: round; opacity: 0; }
+    .p1 { stroke-dasharray: 50 850; animation: signal-flow 4.0s ease-in-out infinite 0.0s; }
+    .p2 { stroke-dasharray: 45 855; animation: signal-flow 4.5s ease-in-out infinite 0.8s; }
+    .p3 { stroke-dasharray: 50 850; animation: signal-flow 3.8s ease-in-out infinite 1.6s; }
+    .p4 { stroke-dasharray: 45 855; animation: signal-rev  4.2s ease-in-out infinite 2.4s; }
+    .p5 { stroke-dasharray: 50 850; animation: signal-flow 5.0s ease-in-out infinite 0.4s; }
+    .p6 { stroke-dasharray: 45 855; animation: signal-rev  3.6s ease-in-out infinite 1.2s; }
+    .p7 { stroke-dasharray: 30 200; animation: signal-flow 3.2s ease-in-out infinite 0.2s; }
+    .p8 { stroke-dasharray: 30 200; animation: signal-rev  3.2s ease-in-out infinite 1.8s; }
+
+    .pad { animation: pad-pulse 3s ease-in-out infinite; }
+    .pad-d1 { animation-delay: 0s; }
+    .pad-d2 { animation-delay: 0.6s; }
+    .pad-d3 { animation-delay: 1.2s; }
+    .pad-d4 { animation-delay: 1.8s; }
+    .pad-d5 { animation-delay: 2.4s; }
+    .pad-d6 { animation-delay: 0.3s; }
+    .pad-d7 { animation-delay: 0.9s; }
+    .pad-d8 { animation-delay: 1.5s; }
+
+    .chip-halo { animation: chip-breathe 3s ease-in-out infinite; }
+    .pin-g     { animation: pin-shine 3s ease-in-out infinite; }
+
+    .board-g { animation: board-in 1s cubic-bezier(0.16,1,0.3,1) both; }
+    .wm-g    { animation: text-in 1s ease 0.5s both; }
+  </style>
+</defs>
+
+
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- PCB BOARD                                     -->
+<!-- ══════════════════════════════════════════════ -->
+<g class="board-g">
+
+<!-- Board shadow layer -->
+<rect x="60" y="30" width="480" height="480" rx="18" fill="#2aac7a" opacity="0.06"/>
+<rect x="64" y="34" width="472" height="472" rx="16" fill="#2aac7a" opacity="0.04"/>
+
+<!-- Board body -->
+<rect x="60" y="30" width="480" height="480" rx="16"
+  fill="url(#board-bg)"
+  stroke="#2aac7a" stroke-width="2.5"/>
+
+<!-- Grid texture inside board -->
+<rect x="60" y="30" width="480" height="480" rx="16" fill="url(#grid)"/>
+
+<!-- ══ EDGE PINS — TOP ══ -->
+<!-- 14 pins, centered, x from ~115 to 485, spaced ~28px -->
+<g class="pin-g" fill="url(#pin-gold)">
+  <rect x="112" y="16" width="7" height="16" rx="2"/>
+  <rect x="140" y="16" width="7" height="16" rx="2"/>
+  <rect x="168" y="16" width="7" height="16" rx="2"/>
+  <rect x="196" y="16" width="7" height="16" rx="2"/>
+  <rect x="224" y="16" width="7" height="16" rx="2"/>
+  <rect x="252" y="16" width="7" height="16" rx="2"/>
+  <rect x="280" y="16" width="7" height="16" rx="2"/>
+  <rect x="308" y="16" width="7" height="16" rx="2"/>
+  <rect x="336" y="16" width="7" height="16" rx="2"/>
+  <rect x="364" y="16" width="7" height="16" rx="2"/>
+  <rect x="392" y="16" width="7" height="16" rx="2"/>
+  <rect x="420" y="16" width="7" height="16" rx="2"/>
+  <rect x="448" y="16" width="7" height="16" rx="2"/>
+  <rect x="476" y="16" width="7" height="16" rx="2"/>
+</g>
+
+<!-- ══ EDGE PINS — BOTTOM ══ -->
+<g class="pin-g" fill="url(#pin-gold)">
+  <rect x="112" y="508" width="7" height="16" rx="2"/>
+  <rect x="140" y="508" width="7" height="16" rx="2"/>
+  <rect x="168" y="508" width="7" height="16" rx="2"/>
+  <rect x="196" y="508" width="7" height="16" rx="2"/>
+  <rect x="224" y="508" width="7" height="16" rx="2"/>
+  <rect x="252" y="508" width="7" height="16" rx="2"/>
+  <rect x="280" y="508" width="7" height="16" rx="2"/>
+  <rect x="308" y="508" width="7" height="16" rx="2"/>
+  <rect x="336" y="508" width="7" height="16" rx="2"/>
+  <rect x="364" y="508" width="7" height="16" rx="2"/>
+  <rect x="392" y="508" width="7" height="16" rx="2"/>
+  <rect x="420" y="508" width="7" height="16" rx="2"/>
+  <rect x="448" y="508" width="7" height="16" rx="2"/>
+  <rect x="476" y="508" width="7" height="16" rx="2"/>
+</g>
+
+<!-- ══ EDGE PINS — LEFT ══ -->
+<g class="pin-g" fill="url(#pin-gold)">
+  <rect x="44" y="78"  width="16" height="7" rx="2"/>
+  <rect x="44" y="106" width="16" height="7" rx="2"/>
+  <rect x="44" y="134" width="16" height="7" rx="2"/>
+  <rect x="44" y="162" width="16" height="7" rx="2"/>
+  <rect x="44" y="190" width="16" height="7" rx="2"/>
+  <rect x="44" y="218" width="16" height="7" rx="2"/>
+  <rect x="44" y="246" width="16" height="7" rx="2"/>
+  <rect x="44" y="274" width="16" height="7" rx="2"/>
+  <rect x="44" y="302" width="16" height="7" rx="2"/>
+  <rect x="44" y="330" width="16" height="7" rx="2"/>
+  <rect x="44" y="358" width="16" height="7" rx="2"/>
+  <rect x="44" y="386" width="16" height="7" rx="2"/>
+  <rect x="44" y="414" width="16" height="7" rx="2"/>
+  <rect x="44" y="442" width="16" height="7" rx="2"/>
+</g>
+
+<!-- ══ EDGE PINS — RIGHT ══ -->
+<g class="pin-g" fill="url(#pin-gold)">
+  <rect x="540" y="78"  width="16" height="7" rx="2"/>
+  <rect x="540" y="106" width="16" height="7" rx="2"/>
+  <rect x="540" y="134" width="16" height="7" rx="2"/>
+  <rect x="540" y="162" width="16" height="7" rx="2"/>
+  <rect x="540" y="190" width="16" height="7" rx="2"/>
+  <rect x="540" y="218" width="16" height="7" rx="2"/>
+  <rect x="540" y="246" width="16" height="7" rx="2"/>
+  <rect x="540" y="274" width="16" height="7" rx="2"/>
+  <rect x="540" y="302" width="16" height="7" rx="2"/>
+  <rect x="540" y="330" width="16" height="7" rx="2"/>
+  <rect x="540" y="358" width="16" height="7" rx="2"/>
+  <rect x="540" y="386" width="16" height="7" rx="2"/>
+  <rect x="540" y="414" width="16" height="7" rx="2"/>
+  <rect x="540" y="442" width="16" height="7" rx="2"/>
+</g>
+
+<!-- ══ CORNER MOUNTING PADS ══ -->
+<g filter="url(#pad-glow)">
+  <circle cx="94"  cy="64"  r="9" fill="#c8a84b" stroke="#e8c870" stroke-width="2" class="pad pad-d1"/>
+  <circle cx="506" cy="64"  r="9" fill="#c8a84b" stroke="#e8c870" stroke-width="2" class="pad pad-d3"/>
+  <circle cx="94"  cy="476" r="9" fill="#c8a84b" stroke="#e8c870" stroke-width="2" class="pad pad-d5"/>
+  <circle cx="506" cy="476" r="9" fill="#c8a84b" stroke="#e8c870" stroke-width="2" class="pad pad-d7"/>
+</g>
+
+<!-- ══════════════════════════════════════ -->
+<!-- CIRCUIT BRAIN TRACES                  -->
+<!-- All traces clipped to board interior  -->
+<!-- ══════════════════════════════════════ -->
+<g clip-path="url(#board-clip)">
+
+  <!-- ── LEFT BRAIN LOBE ── -->
+
+  <!-- Outer left boundary - top arc -->
+  <path fill="none" stroke="url(#trace-v)" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"
+    d="M300,50 L300,80 L220,80 L220,110 L180,110 L180,150 L150,150 L150,200 L180,200 L180,230 L155,230 L155,270"/>
+
+  <!-- Outer left boundary - bottom arc -->
+  <path fill="none" stroke="url(#trace-v)" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"
+    d="M155,270 L155,310 L180,310 L180,340 L150,340 L150,390 L180,390 L180,420 L220,420 L220,450 L300,450 L300,420"/>
+
+  <!-- Left inner top loop -->
+  <path fill="none" stroke="url(#trace-h)" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"
+    d="M220,110 L250,110 L250,140 L205,140 L205,185 L175,185 L175,220 L205,220 L205,270"/>
+
+  <!-- Left inner mid section -->
+  <path fill="none" stroke="url(#trace-h)" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"
+    d="M250,140 L272,140 L272,170 L235,170 L235,215 L272,215 L272,270"/>
+
+  <!-- Left inner bottom loop -->
+  <path fill="none" stroke="url(#trace-v)" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"
+    d="M205,270 L205,315 L175,315 L175,350 L205,350 L205,390 L250,390 L250,420"/>
+
+  <!-- Left inner bottom mid -->
+  <path fill="none" stroke="url(#trace-h)" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"
+    d="M272,270 L272,320 L235,320 L235,360 L272,360 L272,390 L250,390"/>
+
+  <!-- Left horizontal connectors -->
+  <path fill="none" stroke="url(#trace-h)" stroke-width="10" stroke-linecap="square"
+    d="M150,200 L175,200"/>
+  <path fill="none" stroke="url(#trace-h)" stroke-width="10" stroke-linecap="square"
+    d="M150,340 L175,340"/>
+
+  <!-- ── RIGHT BRAIN LOBE (mirror of left) ── -->
+
+  <!-- Outer right boundary - top arc -->
+  <path fill="none" stroke="url(#trace-v)" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"
+    d="M300,50 L300,80 L380,80 L380,110 L420,110 L420,150 L450,150 L450,200 L420,200 L420,230 L445,230 L445,270"/>
+
+  <!-- Outer right boundary - bottom arc -->
+  <path fill="none" stroke="url(#trace-v)" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"
+    d="M445,270 L445,310 L420,310 L420,340 L450,340 L450,390 L420,390 L420,420 L380,420 L380,450 L300,450 L300,420"/>
+
+  <!-- Right inner top loop -->
+  <path fill="none" stroke="url(#trace-h)" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"
+    d="M380,110 L350,110 L350,140 L395,140 L395,185 L425,185 L425,220 L395,220 L395,270"/>
+
+  <!-- Right inner mid section -->
+  <path fill="none" stroke="url(#trace-h)" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"
+    d="M350,140 L328,140 L328,170 L365,170 L365,215 L328,215 L328,270"/>
+
+  <!-- Right inner bottom loop -->
+  <path fill="none" stroke="url(#trace-v)" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"
+    d="M395,270 L395,315 L425,315 L425,350 L395,350 L395,390 L350,390 L350,420"/>
+
+  <!-- Right inner bottom mid -->
+  <path fill="none" stroke="url(#trace-h)" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"
+    d="M328,270 L328,320 L365,320 L365,360 L328,360 L328,390 L350,390"/>
+
+  <!-- Right horizontal connectors -->
+  <path fill="none" stroke="url(#trace-h)" stroke-width="10" stroke-linecap="square"
+    d="M450,200 L425,200"/>
+  <path fill="none" stroke="url(#trace-h)" stroke-width="10" stroke-linecap="square"
+    d="M450,340 L425,340"/>
+
+  <!-- ── CENTER SPINE ── -->
+  <path fill="none" stroke="#2aac7a" stroke-width="10" stroke-linecap="square"
+    d="M300,80 L300,196"/>
+  <path fill="none" stroke="#2aac7a" stroke-width="10" stroke-linecap="square"
+    d="M300,344 L300,450"/>
+
+  <!-- ── CENTER WEAVE (knot connectors around chip) ── -->
+  <path fill="none" stroke="#1a9a8a" stroke-width="8" stroke-linecap="square" stroke-linejoin="miter"
+    d="M272,170 L272,220 L235,220 L235,270 L272,270"/>
+  <path fill="none" stroke="#1a9a8a" stroke-width="8" stroke-linecap="square" stroke-linejoin="miter"
+    d="M328,170 L328,220 L365,220 L365,270 L328,270"/>
+  <path fill="none" stroke="#1a9a8a" stroke-width="8" stroke-linecap="square" stroke-linejoin="miter"
+    d="M272,320 L272,360 L235,360 L235,300 L272,300"/>
+  <path fill="none" stroke="#1a9a8a" stroke-width="8" stroke-linecap="square" stroke-linejoin="miter"
+    d="M328,320 L328,360 L365,360 L365,300 L328,300"/>
+
+  <!-- Chip stub connections -->
+  <path fill="none" stroke="#2aac7a" stroke-width="7" d="M300,226 L300,246"/>
+  <path fill="none" stroke="#2aac7a" stroke-width="7" d="M300,294 L300,314"/>
+  <path fill="none" stroke="#2aac7a" stroke-width="7" d="M246,270 L266,270"/>
+  <path fill="none" stroke="#2aac7a" stroke-width="7" d="M334,270 L354,270"/>
+
+  <!-- ══ SOLDER PADS at trace terminals ══ -->
+  <g fill="#c8a84b" stroke="#e8c870" stroke-width="1.5" filter="url(#pad-glow)">
+    <circle cx="300" cy="50"  r="7" class="pad pad-d1"/>
+    <circle cx="300" cy="450" r="7" class="pad pad-d2"/>
+    <circle cx="150" cy="150" r="6" class="pad pad-d3"/>
+    <circle cx="150" cy="390" r="6" class="pad pad-d4"/>
+    <circle cx="450" cy="150" r="6" class="pad pad-d5"/>
+    <circle cx="450" cy="390" r="6" class="pad pad-d6"/>
+    <circle cx="155" cy="270" r="6" class="pad pad-d7"/>
+    <circle cx="445" cy="270" r="6" class="pad pad-d8"/>
+    <!-- Inner junctions -->
+    <circle cx="205" cy="270" r="5" class="pad pad-d1"/>
+    <circle cx="272" cy="270" r="5" class="pad pad-d3"/>
+    <circle cx="328" cy="270" r="5" class="pad pad-d5"/>
+    <circle cx="395" cy="270" r="5" class="pad pad-d7"/>
+    <circle cx="300" cy="196" r="5" class="pad pad-d2"/>
+    <circle cx="300" cy="344" r="5" class="pad pad-d6"/>
+    <!-- Small endpoint pads -->
+    <circle cx="250" cy="110" r="4" class="pad pad-d4"/>
+    <circle cx="350" cy="110" r="4" class="pad pad-d8"/>
+    <circle cx="250" cy="420" r="4" class="pad pad-d2"/>
+    <circle cx="350" cy="420" r="4" class="pad pad-d6"/>
+  </g>
+
+  <!-- ══ SIGNAL PULSE OVERLAYS ══ -->
+  <!-- Traveling light pulses along traces -->
+
+  <!-- Left outer top -->
+  <path class="pulse p1" stroke-width="3.5"
+    d="M300,50 L300,80 L220,80 L220,110 L180,110 L180,150 L150,150 L150,200 L180,200 L180,230 L155,230 L155,270"/>
+
+  <!-- Left inner -->
+  <path class="pulse p2" stroke-width="3"
+    d="M220,110 L250,110 L250,140 L205,140 L205,185 L175,185 L175,220 L205,220 L205,270 L205,315 L175,315 L175,350 L205,350 L205,390 L250,390 L250,420"/>
+
+  <!-- Right outer top -->
+  <path class="pulse p3" stroke-width="3.5"
+    d="M300,50 L300,80 L380,80 L380,110 L420,110 L420,150 L450,150 L450,200 L420,200 L420,230 L445,230 L445,270"/>
+
+  <!-- Right inner -->
+  <path class="pulse p4" stroke-width="3"
+    d="M380,110 L350,110 L350,140 L395,140 L395,185 L425,185 L425,220 L395,220 L395,270 L395,315 L425,315 L425,350 L395,350 L395,390 L350,390 L350,420"/>
+
+  <!-- Left outer bottom -->
+  <path class="pulse p5" stroke-width="3.5"
+    d="M155,270 L155,310 L180,310 L180,340 L150,340 L150,390 L180,390 L180,420 L220,420 L220,450 L300,450 L300,420"/>
+
+  <!-- Right outer bottom -->
+  <path class="pulse p6" stroke-width="3.5"
+    d="M445,270 L445,310 L420,310 L420,340 L450,340 L450,390 L420,390 L420,420 L380,420 L380,450 L300,450 L300,420"/>
+
+  <!-- Center spine pulses -->
+  <path class="pulse p7" stroke="#7aff9a" stroke-width="3"
+    d="M300,80 L300,196"/>
+  <path class="pulse p8" stroke="#7aff9a" stroke-width="3"
+    d="M300,344 L300,450"/>
+
+</g><!-- /clip -->
+
+<!-- ══════════════════════════════════════ -->
+<!-- CPU CHIP (center, above clip)          -->
+<!-- ══════════════════════════════════════ -->
+
+<!-- Chip glow halo -->
+<circle cx="300" cy="270" r="58" fill="#2aac7a" opacity="0.12" class="chip-halo"/>
+<circle cx="300" cy="270" r="44" fill="#2aac7a" opacity="0.08" class="chip-halo"/>
+
+<!-- Chip body -->
+<rect x="256" y="226" width="88" height="88" rx="4"
+  fill="url(#chip-bg)" stroke="#3a6a3a" stroke-width="2"/>
+
+<!-- Chip edge pins (top) -->
+<g fill="#c8a84b">
+  <rect x="264" y="220" width="5" height="8" rx="1"/>
+  <rect x="275" y="220" width="5" height="8" rx="1"/>
+  <rect x="286" y="220" width="5" height="8" rx="1"/>
+  <rect x="297" y="220" width="5" height="8" rx="1"/>
+  <rect x="308" y="220" width="5" height="8" rx="1"/>
+  <rect x="319" y="220" width="5" height="8" rx="1"/>
+  <rect x="330" y="220" width="5" height="8" rx="1"/>
+</g>
+<!-- Chip edge pins (bottom) -->
+<g fill="#c8a84b">
+  <rect x="264" y="314" width="5" height="8" rx="1"/>
+  <rect x="275" y="314" width="5" height="8" rx="1"/>
+  <rect x="286" y="314" width="5" height="8" rx="1"/>
+  <rect x="297" y="314" width="5" height="8" rx="1"/>
+  <rect x="308" y="314" width="5" height="8" rx="1"/>
+  <rect x="319" y="314" width="5" height="8" rx="1"/>
+  <rect x="330" y="314" width="5" height="8" rx="1"/>
+</g>
+<!-- Chip edge pins (left) -->
+<g fill="#c8a84b">
+  <rect x="248" y="234" width="8" height="5" rx="1"/>
+  <rect x="248" y="245" width="8" height="5" rx="1"/>
+  <rect x="248" y="256" width="8" height="5" rx="1"/>
+  <rect x="248" y="267" width="8" height="5" rx="1"/>
+  <rect x="248" y="278" width="8" height="5" rx="1"/>
+  <rect x="248" y="289" width="8" height="5" rx="1"/>
+  <rect x="248" y="300" width="8" height="5" rx="1"/>
+</g>
+<!-- Chip edge pins (right) -->
+<g fill="#c8a84b">
+  <rect x="344" y="234" width="8" height="5" rx="1"/>
+  <rect x="344" y="245" width="8" height="5" rx="1"/>
+  <rect x="344" y="256" width="8" height="5" rx="1"/>
+  <rect x="344" y="267" width="8" height="5" rx="1"/>
+  <rect x="344" y="278" width="8" height="5" rx="1"/>
+  <rect x="344" y="289" width="8" height="5" rx="1"/>
+  <rect x="344" y="300" width="8" height="5" rx="1"/>
+</g>
+
+<!-- Gold die -->
+<rect x="270" y="240" width="60" height="60" rx="2" fill="url(#die-gold)"/>
+
+<!-- Die grid texture lines -->
+<g stroke="#00000018" stroke-width="1" fill="none">
+  <line x1="270" y1="248" x2="330" y2="248"/>
+  <line x1="270" y1="256" x2="330" y2="256"/>
+  <line x1="270" y1="264" x2="330" y2="264"/>
+  <line x1="270" y1="272" x2="330" y2="272"/>
+  <line x1="270" y1="280" x2="330" y2="280"/>
+  <line x1="270" y1="288" x2="330" y2="288"/>
+  <line x1="278" y1="240" x2="278" y2="300"/>
+  <line x1="286" y1="240" x2="286" y2="300"/>
+  <line x1="294" y1="240" x2="294" y2="300"/>
+  <line x1="302" y1="240" x2="302" y2="300"/>
+  <line x1="310" y1="240" x2="310" y2="300"/>
+  <line x1="318" y1="240" x2="318" y2="300"/>
+</g>
+
+<!-- Die highlight -->
+<rect x="270" y="240" width="30" height="18" rx="2" fill="#ffffff" opacity="0.12"/>
+<rect x="272" y="242" width="12" height="6" rx="1" fill="#ffffff" opacity="0.18"/>
+
+<!-- M letter on die -->
+<text x="300" y="278"
+  font-family="'Courier New', monospace"
+  font-size="20" font-weight="700"
+  text-anchor="middle" dominant-baseline="central"
+  fill="#1a2a1a" opacity="0.35">M</text>
+
+</g><!-- /board-g -->
+
+</svg>

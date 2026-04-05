@@ -172,3 +172,70 @@
   }
 }
 
+/* ── Custom scrollbar ──────────────────────────── */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* ── Dark-mode visibility safety net ──────────────
+   Ensures prose, inputs, and any element that may
+   inherit a browser-default black color becomes
+   readable on dark backgrounds.
+   ───────────────────────────────────────────────── */
+.dark body,
+.dark {
+  color-scheme: dark;
+}
+
+/* prose content in dark mode */
+.dark .prose {
+  color: var(--foreground);
+}
+.dark .prose h1,
+.dark .prose h2,
+.dark .prose h3,
+.dark .prose h4,
+.dark .prose h5,
+.dark .prose h6,
+.dark .prose p,
+.dark .prose li,
+.dark .prose strong,
+.dark .prose em,
+.dark .prose blockquote {
+  color: var(--foreground);
+}
+.dark .prose a {
+  color: var(--primary);
+}
+.dark .prose code {
+  color: var(--foreground);
+  background: var(--muted);
+}
+.dark .prose pre {
+  background: var(--card);
+  color: var(--card-foreground);
+}
+
+/* Input placeholders */
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: oklch(0.55 0 0);
+}
+
+/* Ensure all text inside cards / popups is visible */
+.dark [class*="bg-card"],
+.dark [class*="bg-popover"],
+.dark [class*="bg-muted"] {
+  color: var(--foreground);
+}

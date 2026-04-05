@@ -17,10 +17,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const applyVars = (theme: ThemeConfig, mode: string | undefined) => {
     if (typeof window === "undefined") return;
-    
+
+    // Fall back to reading the .dark class directly from <html> when
+    // next-themes hasn't resolved yet (first render tick)
+    const effectiveMode =
+      mode ?? (document.documentElement.classList.contains("dark") ? "dark" : "light");
+
     const root = document.documentElement;
-    const vars = mode === "dark" ? theme.dark : theme.light;
-    
+    const vars = effectiveMode === "dark" ? theme.dark : theme.light;
+
     Object.entries(vars).forEach(([key, value]) => {
       root.style.setProperty(`--${key}`, value);
     });
@@ -29,10 +34,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setThemeConfig = (id: string) => {
     const theme = THEMES.find((t) => t.id === id);
     if (!theme) return;
-    
+
     setCurrentTheme(theme);
     applyVars(theme, resolvedTheme);
     localStorage.setItem("user-custom-theme", id);
+
+    // Reload so every component picks up the new CSS variables cleanly
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
   };
 
   // Run once on mount to grab the user's saved preference

@@ -32,7 +32,12 @@ export default function Header() {
   }, [])
 
   const toggleTheme = () => {
-    setTheme(resolvedTheme === "dark" ? "light" : "dark")
+    const next = resolvedTheme === "dark" ? "light" : "dark";
+    setTheme(next);
+    // Reload so all components pick up the new theme class cleanly
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
   }
 
   return (
