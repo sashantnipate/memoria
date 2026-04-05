@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 10 520 520" width="512" height="512">
+  <!-- Dark rounded background fills the entire viewBox -->
+  <rect x="40" y="10" width="520" height="520" rx="80" fill="#111111"/>
+
+  <!-- Brain circuit — exact same paths & viewBox as the sidebar inline SVG -->
+  <g
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="10"
+    stroke-linecap="square"
+    stroke-linejoin="miter"
+  >
+    <!-- Left brain lobe -->
+    <path d="M300,50 L300,80 L220,80 L220,110 L180,110 L180,150 L150,150 L150,200 L180,200 L180,230 L155,230 L155,270"/>
+    <path d="M155,270 L155,310 L180,310 L180,340 L150,340 L150,390 L180,390 L180,420 L220,420 L220,450 L300,450 L300,420"/>
+    <path d="M220,110 L250,110 L250,140 L205,140 L205,185 L175,185 L175,220 L205,220 L205,270"/>
+    <path d="M250,140 L272,140 L272,170 L235,170 L235,215 L272,215 L272,270"/>
+    <path d="M205,270 L205,315 L175,315 L175,350 L205,350 L205,390 L250,390 L250,420"/>
+    <path d="M272,270 L272,320 L235,320 L235,360 L272,360 L272,390 L250,390"/>
+    <path d="M150,200 L175,200"/>
+    <path d="M150,340 L175,340"/>
+
+    <!-- Right brain lobe -->
+    <path d="M300,50 L300,80 L380,80 L380,110 L420,110 L420,150 L450,150 L450,200 L420,200 L420,230 L445,230 L445,270"/>
+    <path d="M445,270 L445,310 L420,310 L420,340 L450,340 L450,390 L420,390 L420,420 L380,420 L380,450 L300,450 L300,420"/>
+    <path d="M380,110 L350,110 L350,140 L395,140 L395,185 L425,185 L425,220 L395,220 L395,270"/>
+    <path d="M350,140 L328,140 L328,170 L365,170 L365,215 L328,215 L328,270"/>
+    <path d="M395,270 L395,315 L425,315 L425,350 L395,350 L395,390 L350,390 L350,420"/>
+    <path d="M328,270 L328,320 L365,320 L365,360 L328,360 L328,390 L350,390"/>
+    <path d="M450,200 L425,200"/>
+    <path d="M450,340 L425,340"/>
+
+    <!-- Center spine -->
+    <path stroke-width="10" d="M300,80 L300,196"/>
+    <path stroke-width="10" d="M300,344 L300,450"/>
+
+    <!-- Chip stub connections -->
+    <path stroke-width="7" d="M300,226 L300,246"/>
+    <path stroke-width="7" d="M300,294 L300,314"/>
+    <path stroke-width="7" d="M246,270 L266,270"/>
+    <path stroke-width="7" d="M334,270 L354,270"/>
+
+    <!-- Chip body -->
+    <rect x="256" y="226" width="88" height="88" rx="4" stroke-width="2" fill="#ffffff" fill-opacity="0.08"/>
+  </g>
+
+  <!-- M letter centered on chip -->
+  <text
+    x="300" y="278"
+    font-family="'Courier New', monospace"
+    font-size="28"
+    font-weight="700"
+    text-anchor="middle"
+    dominant-baseline="central"
+    fill="#ffffff"
+    opacity="0.85"
+  >M</text>
+</svg>
