@@ -105,8 +105,8 @@ export default function ChatWindow({
 
   /** Shared input box JSX — reused in both centered and bottom layouts */
   const InputBox = (
-    <div className="relative flex items-center rounded-2xl border border-input bg-card/80 backdrop-blur-md shadow-xl focus-within:border-primary/30 transition-all px-2 py-1.5">
-      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full shrink-0 text-muted-foreground ml-1">
+    <div className="relative flex items-center border border-input bg-card/80 backdrop-blur-md shadow-xl focus-within:border-primary/30 transition-all px-3 py-2" style={{ borderRadius: '36px' }}>
+      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full shrink-0 text-muted-foreground ml-1">
         <Plus className="h-4 w-4" />
       </Button>
 
@@ -119,7 +119,7 @@ export default function ChatWindow({
           e.target.style.height = `${e.target.scrollHeight}px`;
         }}
         placeholder="Ask anything…"
-        className="min-h-[40px] max-h-32 resize-none border-0 bg-transparent px-3 py-2.5 shadow-none focus-visible:ring-0 text-[14px]"
+        className="min-h-[44px] max-h-32 resize-none border-0 bg-transparent px-3 py-2.5 shadow-none focus-visible:ring-0 text-[14px]"
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -132,7 +132,7 @@ export default function ChatWindow({
         onClick={handleSend}
         disabled={!input.trim() || isLoading}
         size="icon"
-        className={`h-9 w-9 shrink-0 rounded-xl transition-all duration-300 mr-1 ${input.trim()
+        className={`h-10 w-10 shrink-0 rounded-3xl transition-all duration-300 mr-1 ${input.trim()
             ? "bg-primary text-primary-foreground"
             : "bg-muted text-muted-foreground opacity-40"
           }`}
