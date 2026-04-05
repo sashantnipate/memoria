@@ -16,10 +16,10 @@ export default async function Page() {
     .sort({ updatedAt: -1 });
 
   return (
-    <div className="h-full w-full overflow-hidden bg-background text-foreground">
-      <div className="flex h-full w-full relative">
+    <div className="h-screen w-full overflow-hidden bg-background text-foreground">
+      <div className="flex h-full w-full">
         <ChatSidebar initialChats={JSON.parse(JSON.stringify(chatSessions))} />
-        <main className="flex h-full min-w-0 flex-1 flex-col overflow-hidden relative">
+        <main className="flex flex-col h-full min-w-0 flex-1 overflow-hidden">
           <ChatWindow userId={userId} initialMessages={[]} chatId={null} />
         </main>
       </div>
