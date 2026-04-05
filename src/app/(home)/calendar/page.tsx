@@ -22,13 +22,13 @@ import {
 } from "@/lib/actions/calendar.actions";
 
 /* ─── Constants ─────────────────────────────────────── */
-const HOUR_HEIGHT = 72;
+const HOUR_HEIGHT = 112;
 const COLORS = [
-  { bg: "bg-blue-500/20 border-blue-500",       text: "text-blue-700 dark:text-blue-300" },
-  { bg: "bg-violet-500/20 border-violet-500",   text: "text-violet-700 dark:text-violet-300" },
-  { bg: "bg-emerald-500/20 border-emerald-500", text: "text-emerald-700 dark:text-emerald-300" },
-  { bg: "bg-amber-500/20 border-amber-500",     text: "text-amber-700 dark:text-amber-300" },
-  { bg: "bg-rose-500/20 border-rose-500",       text: "text-rose-700 dark:text-rose-300" },
+  { bg: "bg-blue-500/20 border-blue-500",       text: "text-blue-700 dark:text-blue-300",   bgSolid: "#dbeafe" },
+  { bg: "bg-violet-500/20 border-violet-500",   text: "text-violet-700 dark:text-violet-300", bgSolid: "#ede9fe" },
+  { bg: "bg-emerald-500/20 border-emerald-500", text: "text-emerald-700 dark:text-emerald-300", bgSolid: "#d1fae5" },
+  { bg: "bg-amber-500/20 border-amber-500",     text: "text-amber-700 dark:text-amber-300",   bgSolid: "#fef3c7" },
+  { bg: "bg-rose-500/20 border-rose-500",       text: "text-rose-700 dark:text-rose-300",   bgSolid: "#ffe4e6" },
 ];
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -37,7 +37,7 @@ function eventToStyle(start: string, end: string) {
   const s = parseISO(start);
   const e = parseISO(end);
   const top    = (differenceInMinutes(s, startOfDay(s)) / 60) * HOUR_HEIGHT;
-  const height = Math.max((differenceInMinutes(e, s) / 60) * HOUR_HEIGHT, 22);
+  const height = Math.max((differenceInMinutes(e, s) / 60) * HOUR_HEIGHT, 44);
   return { top, height };
 }
 
@@ -477,12 +477,10 @@ export default function CalendarPage() {
                         const widthStyle = `calc(${colW}% - ${gapPx * 2}px)`;
 
                         return (
+                          /* Outer div — reserves the original slot space in the grid */
                           <div
                             key={key}
-                            className={cn(
-                              "absolute rounded border-l-[3px] px-1.5 py-0.5 overflow-hidden cursor-pointer transition-all hover:brightness-110 hover:shadow-sm",
-                              color.bg
-                            )}
+                            className="absolute group"
                             style={{
                               top:    style.top,
                               height: style.height,
@@ -490,23 +488,81 @@ export default function CalendarPage() {
                               width:  widthStyle,
                               zIndex: 10 + evIdx,
                             }}
-                            title={ev.title ?? "Event"}
                           >
-                            <p className={cn("text-[10px] font-semibold leading-tight truncate", color.text)}>
-                              {ev.title ?? "Untitled"}
-                            </p>
-                            {style.height > 30 && (
-                              <p className={cn("text-[9px] leading-tight opacity-70", color.text)}>
+                            {/* Inner div — expands on hover to reveal all details */}
+                            <div
+                              className={cn(
+                                "absolute top-0 left-0 rounded border-l-[3px] px-2.5 py-1.5 cursor-pointer transition-all duration-200 ease-in-out",
+                                "overflow-hidden group-hover:overflow-visible group-hover:shadow-2xl group-hover:z-[999]",
+                                color.bg
+                              )}
+                              style={{
+                                minHeight: style.height,
+                                height: 'auto',
+                                width: '100%',
+                              }}
+                              onMouseEnter={e => {
+                                const el = e.currentTarget as HTMLElement;
+                                el.style.width = '200px';
+                                el.style.minWidth = '200px';
+                                el.style.zIndex = '2000';
+                                el.style.overflow = 'visible';
+                                el.style.backgroundColor = color.bgSolid;
+                                el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.18)';
+                              }}
+                              onMouseLeave={e => {
+                                const el = e.currentTarget as HTMLElement;
+                                el.style.width = '100%';
+                                el.style.minWidth = '';
+                                el.style.zIndex = '';
+                                el.style.overflow = 'hidden';
+                                el.style.backgroundColor = '';
+                                el.style.boxShadow = '';
+                              }}
+                            >
+                              {/* Title — always visible */}
+                              <p className={cn("text-[11px] font-semibold leading-tight group-hover:whitespace-normal", color.text,
+                                "truncate group-hover:truncate-none group-hover:text-[12px]"
+                              )}>
+                                {ev.title ?? "Untitled"}
+                              </p>
+
+                              {/* Time range — always visible if block tall enough, always on hover */}
+                              <p className={cn(
+                                "text-[10px] leading-tight opacity-80 mt-0.5 whitespace-nowrap",
+                                style.height <= 44 ? "hidden group-hover:block" : "",
+                                color.text
+                              )}>
                                 {format(parseISO(ev.start), "h:mm a")} – {format(parseISO(ev.end), "h:mm a")}
                               </p>
-                            )}
-                            {ev.meetLink && style.height > 50 && (
-                              <a href={ev.meetLink} target="_blank" rel="noopener noreferrer"
-                                onClick={e => e.stopPropagation()}
-                                className={cn("inline-flex items-center gap-0.5 text-[9px] mt-0.5 underline", color.text)}>
-                                <VideoIcon className="h-2.5 w-2.5" /> Join Meet
-                              </a>
-                            )}
+
+                              {/* Description — only on hover */}
+                              {ev.description && (
+                                <p className={cn(
+                                  "hidden group-hover:block text-[10px] leading-snug opacity-70 mt-1 whitespace-normal",
+                                  color.text
+                                )}>
+                                  {ev.description}
+                                </p>
+                              )}
+
+                              {/* Meet link — always on hover */}
+                              {ev.meetLink && (
+                                <a
+                                  href={ev.meetLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={e => e.stopPropagation()}
+                                  className={cn(
+                                    "mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium underline whitespace-nowrap",
+                                    style.height <= 64 ? "hidden group-hover:inline-flex" : "inline-flex",
+                                    color.text
+                                  )}
+                                >
+                                  <VideoIcon className="h-3 w-3" /> Join Meet
+                                </a>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
