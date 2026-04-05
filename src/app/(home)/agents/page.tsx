@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { getAgents } from "@/lib/actions/agent.actions";
+import { getAgents, deleteAgent } from "@/lib/actions/agent.actions"; // <-- Imported deleteAgent
 import { useEffect, useState } from "react";
-import { Settings2, MessageSquare } from "lucide-react";
+import { Settings2, MessageSquare, Trash2 } from "lucide-react"; // <-- Imported Trash2
+import { toast } from "sonner"; // <-- Imported toast for notifications
 
 export default function Page() {
   const [agents, setAgents] = useState<any[]>([]);
@@ -23,6 +24,22 @@ export default function Page() {
   useEffect(() => {
     fetchAgents();
   }, []);
+
+  // 🚨 NEW: Delete Handler
+  const handleDelete = async (agentId: string) => {
+    if (!window.confirm("Are you sure you want to delete this agent? This action cannot be undone.")) {
+      return;
+    }
+
+    const result = await deleteAgent(agentId);
+    
+    if (result.success) {
+      toast.success("Agent deleted successfully");
+      fetchAgents(); // Refresh the UI
+    } else {
+      toast.error("Failed to delete agent");
+    }
+  };
 
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
@@ -58,7 +75,6 @@ export default function Page() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {agents.map((agent) => (
             <Card key={agent._id} className="shadow-sm hover:shadow-md transition-all">
-              {/* Restored default p-6 for a medium, comfortable size */}
               <CardContent className="p-2 flex items-center justify-between">
                 
                 {/* Left Side: Avatar & Identity */}
@@ -71,12 +87,13 @@ export default function Page() {
                   <div className="flex flex-col justify-center min-w-0 gap-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-base truncate">{agent.name}</h3>
-                      {/* Active Green Dot */}
-                      {agent.status === "ACTIVE" && (
+                      {/* Active Green Dot / Paused Yellow Dot */}
+                      {agent.status === "ACTIVE" ? (
                         <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
+                      ) : (
+                        <div className="h-2 w-2 rounded-full bg-amber-500 shrink-0" />
                       )}
                     </div>
-                    {/* Standard Badge */}
                     <Badge variant="secondary" className="w-fit text-xs">
                       {agent.status}
                     </Badge>
@@ -100,8 +117,16 @@ export default function Page() {
                     </DialogContent>
                   </Dialog>
 
-                  <Button variant="outline" size="icon" className="text-muted-foreground hover:text-foreground">
-                    <MessageSquare className="h-5 w-5" />
+                  
+
+                  {/* 🚨 NEW: Delete Button */}
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"
+                    onClick={() => handleDelete(agent._id)}
+                  >
+                    <Trash2 className="h-5 w-5" />
                   </Button>
                 </div>
                 

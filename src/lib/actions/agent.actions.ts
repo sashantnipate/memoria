@@ -185,3 +185,24 @@ export async function createOrUpdateAgent(formData: any) {
 //     throw new Error("Failed to process chat message");
 //   }
 // }
+
+export async function deleteAgent(agentId: string) {
+  try {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
+
+    await connectToDB();
+
+    // Find and delete the agent, ensuring it belongs to the current user
+    const deleted = await Agent.findOneAndDelete({ _id: agentId, userId });
+    
+    if (!deleted) return { success: false, error: "Agent not found or unauthorized." };
+
+    revalidatePath("/"); // Update this path if your agents page is on a different route (e.g., "/agents")
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete agent:", error);
+    return { success: false, error: "Internal Server Error" };
+  }
+}

@@ -9,6 +9,11 @@ export const syncGmailProcess = inngest.createFunction(
   { 
     id: "sync-gmail-and-embed", 
     retries: 3,
+    // 🚨 FIX 1: Prevent two syncs for the same user from running at the exact same time
+    concurrency: {
+      limit: 1, 
+      key: "event.data.userId", 
+    },
     triggers: [{ event: "gmail/sync.requested" }]
   },
   async ({ event, step }) => { 
@@ -40,7 +45,7 @@ export const syncGmailProcess = inngest.createFunction(
 
     let finalTotalProcessed = 0;
     
-    // 🚨 NEW: Create one master array to hold all new emails found during this sync
+    // Create one master array to hold all new emails found during this sync
     const allNewAiEvents: any[] = []; 
 
     for (const gap of gaps) {
@@ -63,12 +68,17 @@ export const syncGmailProcess = inngest.createFunction(
 
       if (messageIds.length === 0) continue;
 
-      for (let i = 0; i < messageIds.length; i += 5) {
-        const chunk = messageIds.slice(i, i + 5);
+      // 🚨 FIX 2: Deduplicate the array to ensure Gmail didn't send the same ID twice
+      const uniqueMessageIds = [...new Set(messageIds)];
+
+      for (let i = 0; i < uniqueMessageIds.length; i += 5) {
+        const chunk = uniqueMessageIds.slice(i, i + 5);
         
         const chunkData = await step.run(`process-chunk-${gap.type}-${i}`, async () => {
           await connectToDB();
-          const bulkOps = [];
+          
+          // Using a Map to guarantee absolutely no duplicates inside the bulkOps array
+          const bulkOpsMap = new Map();
           const processedEmails = []; 
 
           for (const id of chunk) {
@@ -92,7 +102,8 @@ export const syncGmailProcess = inngest.createFunction(
               const vector = await generateEmailEmbedding(cleanSubject, cleanText || "Empty Email Content");
 
               if (vector) {
-                bulkOps.push({
+                // Add to Map using gmailId as the key to prevent duplicates
+                bulkOpsMap.set(id, {
                   updateOne: {
                     filter: { gmailId: id, userId: userId },
                     update: {
@@ -119,6 +130,8 @@ export const syncGmailProcess = inngest.createFunction(
             }
           }
 
+          const bulkOps = Array.from(bulkOpsMap.values());
+
           if (bulkOps.length > 0) {
             await EmailMemory.bulkWrite(bulkOps, { ordered: false });
           }
@@ -126,7 +139,6 @@ export const syncGmailProcess = inngest.createFunction(
           return processedEmails;
         });
 
-        // 🚨 NEW: Accumulate the events instead of sending them in the loop
         if (chunkData && chunkData.length > 0 && gap.type !== 'history') {
           const eventsFromThisChunk = chunkData.map(email => ({
             name: "email/new.received",
@@ -139,7 +151,6 @@ export const syncGmailProcess = inngest.createFunction(
       }
     }
 
-    // 🚨 NEW: Send ALL AI events at once, completely outside the chunking loops!
     if (allNewAiEvents.length > 0) {
       await step.sendEvent("dispatch-all-ai-triage-events", allNewAiEvents as any);
     }

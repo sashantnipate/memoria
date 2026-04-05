@@ -90,8 +90,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
     setLoading(false);
   };
 
-  const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${formData.avatarSeed}`;
-
+const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${formData.avatarSeed || formData.name || 'bot'}`;
   return (
     <form onSubmit={handleSubmit} className="space-y-6 pt-4">
       
