@@ -153,12 +153,11 @@ export const tools = [
         required: ["eventId"],
       },
     },
-  },
-  {
+  },{
     type: "function",
     function: {
       name: "create_autonomous_agent",
-      description: "Generates an interactive UI form for the user to review and deploy a new background AI agent. Use this when the user asks for automation (e.g., 'send me a daily summary'). Do not tell the user it is saved—tell them you have 'drafted' the agent and they must review and save it below.",
+      description: "Generates an interactive UI form for the user to review and deploy a new background AI agent. Use this when the user asks for automation (e.g., 'send me a daily summary at 6 AM'). Do not tell the user it is saved—tell them you have 'drafted' the agent and they must review and save it below.",
       parameters: {
         type: "object",
         properties: {
@@ -174,6 +173,10 @@ export const tools = [
             type: "number",
             description: "Frequency in minutes (e.g., 60 for hourly, 1440 for daily).",
           },
+          targetTime: { // 🚨 CORRECT PLACEMENT HERE
+            type: "string",
+            description: "If the user asks for a specific time of day, format it in 24-hour time (e.g., '06:00' for 6 AM, '14:30' for 2:30 PM).",
+          },
           permissions: {
             type: "object",
             properties: {
@@ -184,8 +187,9 @@ export const tools = [
             required: ["canReadMemory", "canDraftEmails", "canSendEmails"],
           },
         },
+        // Notice targetTime is NOT in the required array, so the AI can leave it blank if no time is specified
         required: ["name", "systemPrompt", "scheduleInterval", "permissions"],
       },
     },
-  },
+  }
 ];

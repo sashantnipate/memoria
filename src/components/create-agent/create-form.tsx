@@ -20,8 +20,10 @@ import { toast } from "sonner";
 
 type AgentFormData = {
   name: string;
-  avatarSeed : string;
+  avatarSeed: string;
   systemPrompt: string;
+  scheduleInterval: number;
+  targetTime: string;
   permissions: {
     canReadMemory: boolean;
     canDraftEmails: boolean;
@@ -34,33 +36,35 @@ type AgentFormProps = {
   onSuccess?: () => void;
   initialData?: any; 
 };
+
 export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
   const [randomSeed, setRandomSeed] = useState("");
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState<AgentFormData>({
-        name: initialData?.name || "",
-        avatarSeed: initialData?.avatarSeed || "",
-        systemPrompt: initialData?.systemPrompt ||"",
-        permissions: initialData?.permissions ||{
-        canReadMemory: false,
-        canDraftEmails: false,
-        canSendEmails: false,
-        },
-        status: initialData?.status || "ACTIVE",
-    });
+    name: initialData?.name || "",
+    avatarSeed: initialData?.avatarSeed || "",
+    systemPrompt: initialData?.systemPrompt || "",
+    scheduleInterval: initialData?.scheduleInterval || 0,
+    targetTime: initialData?.targetTime || "",
+    permissions: initialData?.permissions || {
+      canReadMemory: false,
+      canDraftEmails: false,
+      canSendEmails: false,
+    },
+    status: initialData?.status || "ACTIVE",
+  });
+
   useEffect(() => {
     if (!initialData) {
-        const seed = Math.random().toString(36).substring(7);
-        setRandomSeed(seed);
-        setFormData((prev) => ({
+      const seed = Math.random().toString(36).substring(7);
+      setRandomSeed(seed);
+      setFormData((prev) => ({
         ...prev,
         avatarSeed: seed,
-        }));
+      }));
     }
-    }, [initialData]);
-
-  
+  }, [initialData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,22 +81,21 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
     const result = await createOrUpdateAgent(payload);
 
     if (result.success) {
-        toast.success("Agent saved successfully!");
-        onSuccess?.();
-        } else {
-        toast.error("Failed to save agent");
+      toast.success("Agent saved successfully!");
+      onSuccess?.();
+    } else {
+      toast.error("Failed to save agent");
     }
     
     setLoading(false);
   };
 
-  // Uses the typed name for the avatar, or falls back to the random seed
   const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${formData.avatarSeed}`;
+
   return (
-    // Removed <Card> wrapper since it's already inside a Dialog
     <form onSubmit={handleSubmit} className="space-y-6 pt-4">
       
-      {/* Name & Avatar Row - Side by side for a modern SaaS look */}
+      {/* Name & Avatar Row */}
       <div className="flex items-center gap-4">
         <Avatar className="h-16 w-16 border bg-muted shadow-sm">
           <AvatarImage src={avatarUrl} alt="Agent Avatar" />
@@ -107,7 +110,7 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
               setFormData({ ...formData, 
                 name: e.target.value,
                 avatarSeed: e.target.value,
-             })
+              })
             }
             placeholder="e.g. SalesBot 9000"
           />
@@ -131,7 +134,38 @@ export default function AgentForm({ onSuccess, initialData }: AgentFormProps) {
         />
       </div>
 
-      {/* Grid Layout for Permissions and Status to save vertical space */}
+      {/* Timing & Scheduling Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/30 p-4 rounded-xl border border-border/50">
+        <div className="space-y-2">
+          <Label htmlFor="scheduleInterval">Interval (Minutes)</Label>
+          <Input
+            id="scheduleInterval"
+            type="number"
+            min="0"
+            value={formData.scheduleInterval || ""}
+            onChange={(e) =>
+              setFormData({ ...formData, scheduleInterval: parseInt(e.target.value) || 0 })
+            }
+            placeholder="e.g. 5, 60, 1440"
+          />
+          <p className="text-[10px] text-muted-foreground">0 = Event Driven | 60 = Hourly | 1440 = Daily</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="targetTime">Target Time (24h)</Label>
+          <Input
+            id="targetTime"
+            type="time"
+            value={formData.targetTime}
+            onChange={(e) =>
+              setFormData({ ...formData, targetTime: e.target.value })
+            }
+          />
+          <p className="text-[10px] text-muted-foreground">Leave blank to use Interval only.</p>
+        </div>
+      </div>
+
+      {/* Permissions and Status Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* Permissions */}
